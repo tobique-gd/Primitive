@@ -1,0 +1,6 @@
+.cache/
+/Editor
+.sconsign.dblite
+compile_commands.json
+.DS_Store*
+thirdparty/glslang/glslang/build_info.h
