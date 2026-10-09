@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/events/window_events.h"
 #include "core/iwindow.h"
 #include "core/layers/editor_layer.h"
 #include "core/layers/layer_stack.h"
@@ -19,6 +20,7 @@ namespace Engine
             Platform::init();
 
             _window = IWindow::create_window();
+            _window->set_event_callback([this](IEvent& e) { on_event(e); });
 
             _project_manager = std::make_shared<ProjectManager>();
             _layer_stack = std::make_shared<LayerStack>();
@@ -32,6 +34,16 @@ namespace Engine
             _window.reset();
 
             Platform::shutdown();
+        }
+
+        void on_event(IEvent& e)
+        {
+            if (e.get_type() == EventType::WINDOW_RESIZE)
+            {
+                auto& resize = static_cast<WindowResizeEvent&>(e);
+                _renderer->on_window_resize(resize.width, resize.height);
+            }
+
         }
 
         void run()

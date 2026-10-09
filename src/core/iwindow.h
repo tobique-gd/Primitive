@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/events/ievent.h"
 #include <memory>
 #include <string>
 #include <glm/glm.hpp>
@@ -18,6 +19,8 @@ namespace Engine
 
     class IWindow {
         public:
+            using EventCallbackFn = std::function<void(IEvent&)>;
+
             virtual ~IWindow() = default;
             static std::shared_ptr<IWindow> create_window(const WindowProps& props = WindowProps());
 
@@ -37,6 +40,7 @@ namespace Engine
             virtual void close() = 0;
             virtual void set_position(int x, int y) = 0;
             virtual glm::ivec2 get_position() const = 0;
+            virtual void set_event_callback(const EventCallbackFn& callback) = 0;
 
             //virtual bool is_key_pressed(KeyCode key) = 0;
 

@@ -15,6 +15,7 @@ namespace Engine
             virtual void on_attach() override;
             virtual void on_detach() override;
             virtual void on_update() override;
+            virtual void on_event(std::shared_ptr<IEvent> event) override;
 
         private:
             std::shared_ptr<ProjectManager> m_project_manager;

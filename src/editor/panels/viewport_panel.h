@@ -16,6 +16,8 @@ namespace Engine
             void set_texture(std::shared_ptr<ITexture2D> texture);
             void on_event(std::shared_ptr<IEvent> event) override ;
 
+
+
         private:
             std::shared_ptr<ITexture2D> m_texture;
     };

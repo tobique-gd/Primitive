@@ -1,5 +1,8 @@
 #include "core/layers/render_layer.h"
-#include "core/events/new_frame_rendered_event.h"
+#include "core/events/ievent.h"
+#include "core/events/rendering_events.h"
+#include <iostream>
+#include <memory>
 
 namespace Engine
 {
@@ -22,6 +25,18 @@ namespace Engine
         m_event_dispatcher->dispatch_event(
             std::make_shared<NewFrameRenderedEvent>(texture)
         );
+    }
+
+    void RenderLayer::on_event(std::shared_ptr<IEvent> event) {
+        if (event->get_type() != EventType::VIEWPORT_SIZE_CHANGED) {
+            return;
+        }
+
+        auto viewport_event = std::static_pointer_cast<ViewportSizeChangedEvent>(event);
+
+        m_renderer->set_viewport_size(viewport_event->width, viewport_event->height);
+        event->consume();
+
     }
 
 }

@@ -42,6 +42,8 @@ source_files = [
     'src/core/layers/render_layer.cpp',
 
     'src/editor/panels/viewport_panel.cpp',
+    'src/editor/panels/console_panel.cpp',
+    'src/editor/panels/hierarchy_panel.cpp',
 
     'src/platform/multi/GLFWWindow.cpp',
     'src/platform/platform.cpp',

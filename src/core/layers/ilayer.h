@@ -14,7 +14,7 @@ namespace Engine
             virtual void on_update() {};
             virtual void on_event(std::shared_ptr<IEvent> event) {};
 
-            void set_event_dispatcher(IEventDispatcher* dispatcher) {
+            virtual void set_event_dispatcher(IEventDispatcher* dispatcher) {
                 m_event_dispatcher = dispatcher;
             }
 

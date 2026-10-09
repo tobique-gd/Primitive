@@ -9,10 +9,12 @@
 namespace Engine {
     class MetalTexture2D : public ITexture2D{
         public:
-                MetalTexture2D(NS::SharedPtr<MTL::Texture> texture)
-                    : texture(texture)
-                {
-                }
+            MetalTexture2D(NS::SharedPtr<MTL::Texture> texture)
+                : texture(texture)
+            {
+                width = texture->width();
+                height = texture->height();
+            }
             MTL::Texture* get_texture() const {
                 return texture.get();
             }
@@ -21,7 +23,7 @@ namespace Engine {
                 return texture.get();
             }
 
-        public:
+        private:
             NS::SharedPtr<MTL::Texture> texture;
     };
 }

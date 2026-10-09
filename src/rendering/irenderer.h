@@ -19,5 +19,7 @@ namespace Engine
 
         virtual std::shared_ptr<ITexture2D> render_viewport() = 0;
         virtual void render_frame() = 0;
+        virtual void set_viewport_size(int width, int height) = 0;
+        virtual void on_window_resize(int width, int height) = 0;
     };
 }

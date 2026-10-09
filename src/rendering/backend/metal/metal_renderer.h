@@ -1,10 +1,11 @@
 #pragma once
 
-#include "cocoa_bridge.h"
 #include <QuartzCore/CAMetalLayer.hpp>
 #include <memory>
 
 
+#include "core/iwindow.h"
+#include "platform/multi/GLFWWindow.h"
 #include "rendering/irenderer.h"
 #include "rendering/itexture_2d.h"
 
@@ -32,12 +33,13 @@ namespace Engine
 
         std::shared_ptr<ITexture2D> render_viewport() override;
         void render_frame() override;
+        void set_viewport_size(int width, int height) override;
+        void on_window_resize(int width, int height) override;
 
     private:
         void init_window(IWindow& window);
         void init_device();
 
-        void create_triangle();
         void create_cube();
 
         void create_default_library();
@@ -48,20 +50,13 @@ namespace Engine
 
         void create_buffers();
 
+
         void create_depth_and_MSAA_textures();
         void create_render_pass_descriptor();
         void create_internal_render_target();
 
         void update_render_pass_descriptor();
-        MTL::DepthStencilState* depth_stencil_state;
-        MTL::RenderPassDescriptor* render_pass_descriptor = nullptr;
-        MTL::RenderPassDescriptor* ui_render_pass_descriptor = nullptr;
-
-        MTL::Texture* msaa_render_target_texture = nullptr;
-        MTL::Texture* depth_texture;
-        int sample_count = 4;
-
-        void present_viewport_debug();
+        void init_ui(IWindow& window);
 
 
         struct Impl;

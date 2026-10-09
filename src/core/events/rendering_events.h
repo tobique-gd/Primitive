@@ -13,4 +13,13 @@ namespace Engine {
 
         inline EventType get_type() const override { return EventType::NEW_FRAME_RENDERED; }
     };
+
+    struct ViewportSizeChangedEvent : public IEvent {
+        int width;
+        int height;
+
+        ViewportSizeChangedEvent(int v_width, int v_height) : width(v_width), height(v_height) {}
+
+        inline EventType get_type() const override { return EventType::VIEWPORT_SIZE_CHANGED; }
+    };
 }

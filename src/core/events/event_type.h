@@ -10,6 +10,7 @@ namespace Engine
         MOUSE_BUTTON_RELEASE,
         MOUSE_SCROLL,
         WINDOW_RESIZE,
-        NEW_FRAME_RENDERED
+        NEW_FRAME_RENDERED,
+        VIEWPORT_SIZE_CHANGED,
     };
 }

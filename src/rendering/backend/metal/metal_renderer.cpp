@@ -7,10 +7,13 @@
 #include "Metal/MTLResource.hpp"
 #include "cocoa_bridge.h"
 
+#include "core/iwindow.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_metal.h"
 #include "platform/multi/GLFWWindow.h"
+
+#include "editor/ui_context.h"
 
 #include <CoreGraphics/CoreGraphics.h>
 #include <Metal/Metal.hpp>
@@ -51,6 +54,16 @@ namespace Engine
 
         void* cocoa_window = nullptr;
         glm::ivec2 frame_buffer_size;
+        glm::ivec2 viewport_size = {1, 1};
+
+        MTL::DepthStencilState* depth_stencil_state;
+        MTL::RenderPassDescriptor* render_pass_descriptor = nullptr;
+        MTL::RenderPassDescriptor* ui_render_pass_descriptor = nullptr;
+
+        MTL::Texture* msaa_render_target_texture = nullptr;
+        MTL::Texture* depth_texture;
+        int sample_count = 4;
+
     };
 
     MetalRenderer::MetalRenderer()
@@ -64,32 +77,29 @@ namespace Engine
         delete metal_backend;
     }
 
+    void MetalRenderer::set_viewport_size(int width, int height)
+    {
+        if (width <= 0 || height <= 0)
+            return;
+
+        if (metal_backend->viewport_size.x == width &&
+            metal_backend->viewport_size.y == height)
+            return;
+
+        metal_backend->viewport_size = { width, height };
+
+        create_depth_and_MSAA_textures();
+        create_internal_render_target();
+        create_render_pass_descriptor();
+    }
+
+
     void MetalRenderer::init(IWindow& window)
     {
         init_device();
         init_window(window);
         create_buffers();
-
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        io.Fonts->AddFontFromFileTTF("assets/fonts/LiberationSans-Regular.ttf");
-
-        ImGui::StyleColorsLight();
-
-        auto* glfw_window = dynamic_cast<GLFWWindow*>(&window);
-
-        if (!glfw_window)
-            throw std::runtime_error("MetalRenderer requires GLFWwindow");
-
-        ImGui_ImplGlfw_InitForOther(
-            glfw_window->get_glfw_window(),
-            true
-        );
-
-        ImGui_ImplMetal_Init(metal_backend->metal_device);
-
+        init_ui(window);
 
 
 
@@ -106,6 +116,29 @@ namespace Engine
         create_render_pass_descriptor();
 
     }
+
+    void MetalRenderer::init_ui(IWindow& window) {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.Fonts->AddFontFromFileTTF("assets/fonts/IBMPlexSans-Regular.ttf");
+
+        UIStyle::setup_ui_style();
+
+        auto* glfw_window = dynamic_cast<GLFWWindow*>(&window);
+
+        if (!glfw_window)
+            throw std::runtime_error("MetalRenderer requires GLFWwindow");
+
+        ImGui_ImplGlfw_InitForOther(
+            glfw_window->get_glfw_window(),
+            true
+        );
+
+        ImGui_ImplMetal_Init(metal_backend->metal_device);
+    }
+
 
     void MetalRenderer::init_device()
     {
@@ -144,27 +177,27 @@ namespace Engine
     }
 
     void MetalRenderer::create_render_pass_descriptor() {
-        render_pass_descriptor = MTL::RenderPassDescriptor::alloc()->init();
+        metal_backend->render_pass_descriptor = MTL::RenderPassDescriptor::alloc()->init();
 
-        MTL::RenderPassColorAttachmentDescriptor* colorAttachment = render_pass_descriptor->colorAttachments()->object(0);
-        MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = render_pass_descriptor->depthAttachment();
+        MTL::RenderPassColorAttachmentDescriptor* colorAttachment = metal_backend->render_pass_descriptor->colorAttachments()->object(0);
+        MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = metal_backend->render_pass_descriptor->depthAttachment();
 
-        colorAttachment->setTexture(msaa_render_target_texture);
+        colorAttachment->setTexture(metal_backend->msaa_render_target_texture);
         colorAttachment->setResolveTexture(metal_backend->internal_render_target.get());
         colorAttachment->setLoadAction(MTL::LoadActionClear);
         colorAttachment->setClearColor(MTL::ClearColor(41.0f/255.0f, 42.0f/255.0f, 48.0f/255.0f, 1.0));
         colorAttachment->setStoreAction(MTL::StoreActionMultisampleResolve);
 
-        depthAttachment->setTexture(depth_texture);
+        depthAttachment->setTexture(metal_backend->depth_texture);
         depthAttachment->setLoadAction(MTL::LoadActionClear);
         depthAttachment->setStoreAction(MTL::StoreActionDontCare);
         depthAttachment->setClearDepth(1.0);
     }
 
     void MetalRenderer::update_render_pass_descriptor() {
-        render_pass_descriptor->colorAttachments()->object(0)->setTexture(msaa_render_target_texture);
-        render_pass_descriptor->colorAttachments()->object(0)->setResolveTexture(metal_backend->internal_render_target.get());
-        render_pass_descriptor->depthAttachment()->setTexture(depth_texture);
+        metal_backend->render_pass_descriptor->colorAttachments()->object(0)->setTexture(metal_backend->msaa_render_target_texture);
+        metal_backend->render_pass_descriptor->colorAttachments()->object(0)->setResolveTexture(metal_backend->internal_render_target.get());
+        metal_backend->render_pass_descriptor->depthAttachment()->setTexture(metal_backend->depth_texture);
     }
 
 
@@ -243,9 +276,9 @@ namespace Engine
         }
 
         metal_backend->transform_buffer->release();
-        msaa_render_target_texture->release();
-        depth_texture->release();
-        render_pass_descriptor->release();
+        metal_backend->msaa_render_target_texture->release();
+        metal_backend->depth_texture->release();
+        metal_backend->render_pass_descriptor->release();
     }
 
     void MetalRenderer::begin_imgui()
@@ -255,9 +288,9 @@ namespace Engine
 
         if (!metal_backend->metal_drawable) return;
 
-        ui_render_pass_descriptor = MTL::RenderPassDescriptor::alloc()->init();
+        metal_backend->ui_render_pass_descriptor = MTL::RenderPassDescriptor::alloc()->init();
 
-        auto* color = ui_render_pass_descriptor->colorAttachments()->object(0);
+        auto* color = metal_backend->ui_render_pass_descriptor->colorAttachments()->object(0);
 
         color->setTexture(metal_backend->metal_drawable->texture());
         color->setLoadAction(MTL::LoadActionClear);
@@ -265,7 +298,7 @@ namespace Engine
         color->setClearColor(MTL::ClearColor(0,0,0,1));
 
         ImGui_ImplGlfw_NewFrame();
-        ImGui_ImplMetal_NewFrame(ui_render_pass_descriptor);
+        ImGui_ImplMetal_NewFrame(metal_backend->ui_render_pass_descriptor);
         ImGui::NewFrame();
 
     }
@@ -276,7 +309,7 @@ namespace Engine
 
         auto* command_buffer = metal_backend->metal_command_queue->commandBuffer();
 
-        auto* encoder = command_buffer->renderCommandEncoder(ui_render_pass_descriptor);
+        auto* encoder = command_buffer->renderCommandEncoder(metal_backend->ui_render_pass_descriptor);
         ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), command_buffer, encoder);
 
         encoder->endEncoding();
@@ -284,8 +317,8 @@ namespace Engine
         command_buffer->presentDrawable(metal_backend->metal_drawable);
         command_buffer->commit();
 
-        ui_render_pass_descriptor->release();
-        ui_render_pass_descriptor = nullptr;
+        metal_backend->ui_render_pass_descriptor->release();
+        metal_backend->ui_render_pass_descriptor = nullptr;
 
     }
 
@@ -297,8 +330,7 @@ namespace Engine
         if (!metal_backend->metal_drawable)
             return;
 
-        MTL::RenderPassDescriptor* descriptor =
-            MTL::RenderPassDescriptor::alloc()->init();
+        MTL::RenderPassDescriptor* descriptor = MTL::RenderPassDescriptor::alloc()->init();
 
         auto* color = descriptor->colorAttachments()->object(0);
 
@@ -327,34 +359,38 @@ namespace Engine
         descriptor->release();
     }
 
+    void MetalRenderer::on_window_resize(int width, int height)
+    {
+        if (width <= 0 || height <= 0)
+            return;
+
+        metal_backend->frame_buffer_size = { width, height };
+
+        if (metal_backend->metal_layer)
+        {
+            metal_backend->metal_layer->setDrawableSize(CGSizeMake(width, height));
+        }
+    }
+
     void MetalRenderer::create_internal_render_target()
     {
-        glm::ivec2 size = metal_backend->frame_buffer_size;
+        glm::ivec2 size = metal_backend->viewport_size;
 
-        MTL::TextureDescriptor* descriptor =
-            MTL::TextureDescriptor::alloc()->init();
+        auto* descriptor = MTL::TextureDescriptor::alloc()->init();
 
         descriptor->setTextureType(MTL::TextureType2D);
         descriptor->setPixelFormat(MTL::PixelFormatBGRA8Unorm);
         descriptor->setWidth(size.x);
         descriptor->setHeight(size.y);
-        descriptor->setUsage(
-            MTL::TextureUsageRenderTarget |
-            MTL::TextureUsageShaderRead
-        );
+        descriptor->setUsage(MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead);
         descriptor->setStorageMode(MTL::StorageModePrivate);
 
-        metal_backend->internal_render_target = NS::TransferPtr(
-                    metal_backend->metal_device->newTexture(descriptor)
-                );
+        metal_backend->internal_render_target = NS::TransferPtr(metal_backend->metal_device->newTexture(descriptor));
 
         descriptor->release();
 
 
-        metal_backend->viewport_texture =
-            std::make_shared<MetalTexture2D>(
-                metal_backend->internal_render_target
-            );
+        metal_backend->viewport_texture = std::make_shared<MetalTexture2D>(metal_backend->internal_render_target);
 
 
     }
@@ -372,67 +408,32 @@ namespace Engine
         frame_pool->release();
 
         //present_viewport_debug();
+
         return metal_backend->viewport_texture;
+
+
     }
-
-    void MetalRenderer::present_viewport_debug()
-    {
-        metal_backend->metal_drawable =
-            metal_backend->metal_layer->nextDrawable();
-
-        if (!metal_backend->metal_drawable)
-            return;
-
-        MTL::CommandBuffer* command_buffer =
-            metal_backend->metal_command_queue->commandBuffer();
-
-        MTL::BlitCommandEncoder* blit =
-            command_buffer->blitCommandEncoder();
-
-        blit->copyFromTexture(
-            metal_backend->internal_render_target.get(),
-            0,
-            0,
-            MTL::Origin(0, 0, 0),
-            MTL::Size(
-                metal_backend->frame_buffer_size.x,
-                metal_backend->frame_buffer_size.y,
-                1
-            ),
-            metal_backend->metal_drawable->texture(),
-            0,
-            0,
-            MTL::Origin(0, 0, 0)
-        );
-
-        blit->endEncoding();
-
-        command_buffer->presentDrawable(metal_backend->metal_drawable);
-        command_buffer->commit();
-    }
-
-
 
     void MetalRenderer::create_depth_and_MSAA_textures() {
         MTL::TextureDescriptor* msaa_texture_descriptor = MTL::TextureDescriptor::alloc()->init();
         msaa_texture_descriptor->setTextureType(MTL::TextureType2DMultisample);
         msaa_texture_descriptor->setPixelFormat(MTL::PixelFormatBGRA8Unorm);
-        msaa_texture_descriptor->setWidth(metal_backend->metal_layer->drawableSize().width);
-        msaa_texture_descriptor->setHeight(metal_backend->metal_layer->drawableSize().height);
-        msaa_texture_descriptor->setSampleCount(sample_count);
+        msaa_texture_descriptor->setWidth(metal_backend->viewport_size.x);
+        msaa_texture_descriptor->setHeight(metal_backend->viewport_size.y);
+        msaa_texture_descriptor->setSampleCount(metal_backend->sample_count);
         msaa_texture_descriptor->setUsage(MTL::TextureUsageRenderTarget);
 
-        msaa_render_target_texture = metal_backend->metal_device->newTexture(msaa_texture_descriptor);
+        metal_backend->msaa_render_target_texture = metal_backend->metal_device->newTexture(msaa_texture_descriptor);
 
         MTL::TextureDescriptor* depthTextureDescriptor = MTL::TextureDescriptor::alloc()->init();
         depthTextureDescriptor->setTextureType(MTL::TextureType2DMultisample);
         depthTextureDescriptor->setPixelFormat(MTL::PixelFormatDepth32Float);
-        depthTextureDescriptor->setWidth(metal_backend->metal_layer->drawableSize().width);
-        depthTextureDescriptor->setHeight(metal_backend->metal_layer->drawableSize().height);
+        depthTextureDescriptor->setWidth(metal_backend->viewport_size.x);
+        depthTextureDescriptor->setHeight(metal_backend->viewport_size.y);
         depthTextureDescriptor->setUsage(MTL::TextureUsageRenderTarget);
-        depthTextureDescriptor->setSampleCount(sample_count);
+        depthTextureDescriptor->setSampleCount(metal_backend->sample_count);
 
-        depth_texture = metal_backend->metal_device->newTexture(depthTextureDescriptor);
+        metal_backend->depth_texture = metal_backend->metal_device->newTexture(depthTextureDescriptor);
 
         msaa_texture_descriptor->release();
         depthTextureDescriptor->release();
@@ -444,7 +445,7 @@ namespace Engine
 
         update_render_pass_descriptor();
 
-        MTL::RenderCommandEncoder* render_command_encoder = metal_backend->metal_command_buffer->renderCommandEncoder(render_pass_descriptor);
+        MTL::RenderCommandEncoder* render_command_encoder = metal_backend->metal_command_buffer->renderCommandEncoder(metal_backend->render_pass_descriptor);
 
         encode_render_command(render_command_encoder);
         render_command_encoder->endEncoding();
@@ -575,8 +576,8 @@ namespace Engine
                 0, 0, 0, 1
             );
 
-        float width = metal_backend->metal_layer->drawableSize().width;
-        float height = metal_backend->metal_layer->drawableSize().height;
+        float width = metal_backend->viewport_size.x;
+        float height = metal_backend->viewport_size.y;
 
         float aspect_ratio = width / height;
 
@@ -599,7 +600,7 @@ namespace Engine
 
         //render_command_encoder->setTriangleFillMode(MTL::TriangleFillModeLines);
         render_command_encoder->setRenderPipelineState(metal_backend->metal_render_pso);
-        render_command_encoder->setDepthStencilState(depth_stencil_state);
+        render_command_encoder->setDepthStencilState(metal_backend->depth_stencil_state);
         render_command_encoder->setVertexBuffer(metal_backend->vertex_buffer, 0, 0);
 
         render_command_encoder->setVertexBuffer(metal_backend->transform_buffer, 0, 1);
@@ -609,54 +610,47 @@ namespace Engine
         render_command_encoder->drawIndexedPrimitives(type_triangle, 36, index_type_uint32, metal_backend->index_buffer, 0);
     }
 
-
-
-    void MetalRenderer::create_triangle() {
-        simd::float3 triangleVertices[] = {
-            {-0.5f, -0.5f, 0.0f},
-            { 0.5f, -0.5f, 0.0f},
-            { 0.0f,  0.5f, 0.0f}
-        };
-
-        metal_backend->vertex_buffer = metal_backend->metal_device->newBuffer(&triangleVertices,
-                                                      sizeof(triangleVertices),
-                                                      MTL::ResourceStorageModeShared);
-    }
-
-
-
     void MetalRenderer::create_cube() {
         VertexData cubeVertices[] = {
-            {{-0.5, -0.5, -0.5, 1.0}, {-0.577350, -0.577350, -0.577350}, {0.0, 0.0}},
-            {{ 0.5, -0.5, -0.5, 1.0}, { 0.577350, -0.577350, -0.577350}, {1.0, 0.0}},
-            {{ 0.5,  0.5, -0.5, 1.0}, { 0.577350,  0.577350, -0.577350}, {1.0, 1.0}},
-            {{-0.5,  0.5, -0.5, 1.0}, {-0.577350,  0.577350, -0.577350}, {0.0, 1.0}},
+                {{-0.5, -0.5,  0.5, 1.0}, { 0.0,  0.0,  1.0}, {0.0, 0.0}},
+                {{ 0.5, -0.5,  0.5, 1.0}, { 0.0,  0.0,  1.0}, {1.0, 0.0}},
+                {{ 0.5,  0.5,  0.5, 1.0}, { 0.0,  0.0,  1.0}, {1.0, 1.0}},
+                {{-0.5,  0.5,  0.5, 1.0}, { 0.0,  0.0,  1.0}, {0.0, 1.0}},
 
-            {{-0.5, -0.5,  0.5, 1.0}, {-0.577350, -0.577350,  0.577350}, {0.0, 0.0}},
-            {{ 0.5, -0.5,  0.5, 1.0}, { 0.577350, -0.577350, 0.577350}, {1.0, 0.0}},
-            {{ 0.5,  0.5,  0.5, 1.0}, { 0.577350,  0.577350, 0.577350}, {1.0, 1.0}},
-            {{-0.5,  0.5,  0.5, 1.0}, {-0.577350,  0.577350, 0.577350}, {0.0, 1.0}}
-        };
+                {{ 0.5, -0.5, -0.5, 1.0}, { 0.0,  0.0, -1.0}, {0.0, 0.0}},
+                {{-0.5, -0.5, -0.5, 1.0}, { 0.0,  0.0, -1.0}, {1.0, 0.0}},
+                {{-0.5,  0.5, -0.5, 1.0}, { 0.0,  0.0, -1.0}, {1.0, 1.0}},
+                {{ 0.5,  0.5, -0.5, 1.0}, { 0.0,  0.0, -1.0}, {0.0, 1.0}},
 
-        uint32_t cubeIndices[] = {
-            0, 1, 2,
-            0, 2, 3,
+                {{-0.5,  0.5,  0.5, 1.0}, { 0.0,  1.0,  0.0}, {0.0, 0.0}},
+                {{ 0.5,  0.5,  0.5, 1.0}, { 0.0,  1.0,  0.0}, {1.0, 0.0}},
+                {{ 0.5,  0.5, -0.5, 1.0}, { 0.0,  1.0,  0.0}, {1.0, 1.0}},
+                {{-0.5,  0.5, -0.5, 1.0}, { 0.0,  1.0,  0.0}, {0.0, 1.0}},
 
-            4, 6, 5,
-            4, 7, 6,
+                {{-0.5, -0.5, -0.5, 1.0}, { 0.0, -1.0,  0.0}, {0.0, 0.0}},
+                {{ 0.5, -0.5, -0.5, 1.0}, { 0.0, -1.0,  0.0}, {1.0, 0.0}},
+                {{ 0.5, -0.5,  0.5, 1.0}, { 0.0, -1.0,  0.0}, {1.0, 1.0}},
+                {{-0.5, -0.5,  0.5, 1.0}, { 0.0, -1.0,  0.0}, {0.0, 1.0}},
 
-            3, 2, 6,
-            3, 6, 7,
+                {{ 0.5, -0.5,  0.5, 1.0}, { 1.0,  0.0,  0.0}, {0.0, 0.0}},
+                {{ 0.5, -0.5, -0.5, 1.0}, { 1.0,  0.0,  0.0}, {1.0, 0.0}},
+                {{ 0.5,  0.5, -0.5, 1.0}, { 1.0,  0.0,  0.0}, {1.0, 1.0}},
+                {{ 0.5,  0.5,  0.5, 1.0}, { 1.0,  0.0,  0.0}, {0.0, 1.0}},
 
-            0, 5, 1,
-            0, 4, 5,
+                {{-0.5, -0.5, -0.5, 1.0}, {-1.0,  0.0,  0.0}, {0.0, 0.0}},
+                {{-0.5, -0.5,  0.5, 1.0}, {-1.0,  0.0,  0.0}, {1.0, 0.0}},
+                {{-0.5,  0.5,  0.5, 1.0}, {-1.0,  0.0,  0.0}, {1.0, 1.0}},
+                {{-0.5,  0.5, -0.5, 1.0}, {-1.0,  0.0,  0.0}, {0.0, 1.0}}
+            };
 
-            0, 3, 7,
-            0, 7, 4,
-
-            1, 5, 6,
-            1, 6, 2
-        };
+            uint32_t cubeIndices[] = {
+                 0,  2,  1,    0,  3,  2,
+                 4,  6,  5,    4,  7,  6,
+                 8, 10,  9,    8, 11, 10,
+                12, 14, 13,   12, 15, 14,
+                16, 18, 17,   16, 19, 18,
+                20, 22, 21,   20, 23, 22
+            };
 
 
         metal_backend->vertex_buffer = metal_backend->metal_device->newBuffer(cubeVertices, sizeof(cubeVertices), MTL::ResourceStorageModeShared);
@@ -686,7 +680,7 @@ namespace Engine
 
         MTL::PixelFormat pixel_format = (MTL::PixelFormat) metal_backend->metal_layer->pixelFormat();
         render_pipeline_descriptor->colorAttachments()->object(0)->setPixelFormat(pixel_format);
-        render_pipeline_descriptor->setSampleCount(sample_count);
+        render_pipeline_descriptor->setSampleCount(metal_backend->sample_count);
         render_pipeline_descriptor->setDepthAttachmentPixelFormat(MTL::PixelFormatDepth32Float);
 
         NS::Error* error;
@@ -700,7 +694,7 @@ namespace Engine
         MTL::DepthStencilDescriptor* depth_stencil_descriptor = MTL::DepthStencilDescriptor::alloc()->init();
         depth_stencil_descriptor->setDepthCompareFunction(MTL::CompareFunctionLessEqual);
         depth_stencil_descriptor->setDepthWriteEnabled(true);
-        depth_stencil_state = metal_backend->metal_device->newDepthStencilState(depth_stencil_descriptor);
+        metal_backend->depth_stencil_state = metal_backend->metal_device->newDepthStencilState(depth_stencil_descriptor);
 
         render_pipeline_descriptor->release();
         vertex_shader->release();

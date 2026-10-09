@@ -8,6 +8,8 @@ namespace Engine
     class GLFWWindow : public IWindow
     {
     public:
+        using FramebufferSizeCallback = std::function<void(int, int)>;
+
         GLFWWindow(const WindowProps& props);
         ~GLFWWindow() override;
 
@@ -28,11 +30,21 @@ namespace Engine
         void close() override;
         void set_position(int x, int y) override;
         glm::ivec2 get_position() const override;
+        void set_event_callback(const EventCallbackFn& callback) override {
+            m_data.event_callback = callback;
+        }
+
 
     private:
         GLFWwindow* m_window = nullptr;
 
-        WindowProps m_props;
+        struct WindowData
+        {
+            WindowProps props;
+            EventCallbackFn event_callback;
+        };
+
+        WindowData m_data;
 
         bool m_vsync = false;
         bool m_fullscreen = false;
@@ -41,5 +53,7 @@ namespace Engine
         int m_windowed_y = 0;
         int m_windowed_width = 0;
         int m_windowed_height = 0;
+
+        FramebufferSizeCallback m_resize_callback;
     };
 }

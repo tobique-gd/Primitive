@@ -1,5 +1,6 @@
 #include "GLFWWindow.h"
 #include "GLFW/glfw3.h"
+#include "core/events/window_events.h"
 #include <string>
 
 #define GLFW_EXPOSE_NATIVE_COCOA
@@ -8,7 +9,7 @@
 namespace Engine
 {
     GLFWWindow::GLFWWindow(const WindowProps& props)
-        : m_props(props), m_vsync(props.vsync)
+        : m_vsync(props.vsync)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -23,7 +24,18 @@ namespace Engine
         if (!m_window)
             throw std::runtime_error("Failed to create GLFW window");
 
-        glfwSetWindowUserPointer(m_window, this);
+        glfwSetWindowUserPointer(m_window, &m_data);
+
+        glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* window, int width, int height) {
+            auto& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
+            data.props.width = width;
+            data.props.height = height;
+
+            WindowResizeEvent event(width, height);
+            if (data.event_callback) {
+                data.event_callback(event);
+            }
+        });
 
         glfwGetWindowPos(m_window, &m_windowed_x, &m_windowed_y);
 
