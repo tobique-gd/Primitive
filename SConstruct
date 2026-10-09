@@ -52,6 +52,8 @@ source_files = [
     'src/rendering/backend/metal/cocoa_bridge.mm',
     'src/rendering/backend/metal/mtl_impl.cpp',
 
+    'src/rendering/rhi/metal/metal_device.cpp',
+
     'src/rendering/shaders/shader_compiler.cpp',
 
     'thirdparty/imgui/imgui.cpp',

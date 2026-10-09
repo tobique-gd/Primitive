@@ -111,7 +111,6 @@ namespace Engine
 
         create_depth_and_MSAA_textures();
         create_internal_render_target();
-
         create_render_pipeline();
         create_render_pass_descriptor();
 
