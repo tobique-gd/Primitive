@@ -1,14 +1,14 @@
 #pragma once
 
 #include "core/events/window_events.h"
-#include "core/iwindow.h"
-#include "core/layers/editor_layer.h"
+#include "systems/display/iwindow.h"
+#include "editor/layers/editor_layer.h"
 #include "core/layers/layer_stack.h"
 #include <memory>
 #include <shared_mutex>
-#include "platform/platform.h"
-#include "rendering/backend/metal/metal_renderer.h"
-#include "rendering/irenderer.h"
+#include "systems/rendering/backends/metal/metal_renderer.h"
+#include "systems/rendering/irenderer.h"
+#include "systems/display/display_system.h"
 
 namespace Engine
 {
@@ -17,9 +17,9 @@ namespace Engine
     public:
         Application()
         {
-            Platform::init();
-
-            _window = IWindow::create_window();
+            //Platform::init();
+            _display_system = std::make_shared<DisplaySystem>();
+            _window = _display_system->create_window();
             _window->set_event_callback([this](IEvent& e) { on_event(e); });
 
             _project_manager = std::make_shared<ProjectManager>();
@@ -33,7 +33,7 @@ namespace Engine
             _layer_stack.reset();
             _window.reset();
 
-            Platform::shutdown();
+            //Platform::shutdown();
         }
 
         void on_event(IEvent& e)
@@ -59,5 +59,6 @@ namespace Engine
         std::shared_ptr<LayerStack> _layer_stack;
         std::shared_ptr<ProjectManager> _project_manager;
         std::shared_ptr<IRenderer> _renderer;
+        std::shared_ptr<DisplaySystem> _display_system;
     };
 }
