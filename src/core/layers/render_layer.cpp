@@ -1,12 +1,12 @@
 #include "core/layers/render_layer.h"
 #include "core/events/ievent.h"
 #include "core/events/rendering_events.h"
+#include "systems/rendering/rendering_system.h"
 #include <iostream>
 #include <memory>
 
-namespace Engine
-{
-    RenderLayer::RenderLayer(std::shared_ptr<IRenderer> renderer,
+namespace Primitive {
+    RenderLayer::RenderLayer(std::shared_ptr<RenderingSystem> renderer,
                             std::shared_ptr<ProjectManager> project_manager
                             )
                             : m_project_manager(project_manager)
@@ -20,7 +20,8 @@ namespace Engine
 
     void RenderLayer::on_update()
     {
-        auto texture = m_renderer->render_viewport();
+        m_renderer->draw();
+        auto texture = m_renderer->get_viewport_texture();
 
         m_event_dispatcher->dispatch_event(
             std::make_shared<NewFrameRenderedEvent>(texture)

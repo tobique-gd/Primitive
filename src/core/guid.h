@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 
-namespace Engine
-{
+namespace Primitive {
     class GUID {
         public:
             static const GUID INVALID;
@@ -33,5 +33,16 @@ namespace Engine
 
         private:
             uint64_t m_GUID;
+    };
+
+
+}
+
+namespace std {
+    template <>
+    struct hash<Primitive::GUID> {
+        size_t operator()(const Primitive::GUID& guid) const noexcept {
+            return hash<uint64_t>{}(guid.value());
+        }
     };
 }

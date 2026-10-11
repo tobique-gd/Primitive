@@ -1,27 +1,29 @@
 #include "editor/layers/editor_layer.h"
 #include "core/events/ievent.h"
-#include "editor/IconsFontAwesome6.h"
+#include "editor/panels/inspector_panel.h"
+#include "editor/ui/IconsFontAwesome6.h"
 #include "editor/panels/hierarchy_panel.h"
 #include "editor/panels/viewport_panel.h"
 #include "editor/panels/console_panel.h"
-#include "editor/ui_context.h"
+#include "editor/ui/ui_theme.h"
 #include "imgui_internal.h"
-#include "systems/rendering/irenderer.h"
 #include "imgui.h"
+#include "systems/rendering/rendering_system.h"
 
 #include <iostream>
 #include <memory>
-namespace Engine
-{
+namespace Primitive {
     EditorLayer::EditorLayer(std::shared_ptr<IWindow> window,
                             std::shared_ptr<ProjectManager> project_manager,
-                            std::shared_ptr<IRenderer> renderer)
+                            std::shared_ptr<RenderingSystem> renderer)
                             : m_window(window)
                             , m_project_manager(project_manager)
                             , m_renderer(renderer)
-                            , m_editor_panels({std::make_unique<ViewportPanel>(),
+                            , m_editor_state(std::make_shared<EditorState>())
+                            , m_editor_panels({std::make_unique<ViewportPanel>(m_editor_state),
                                 std::make_unique<ConsolePanel>(),
-                                std::make_unique<HierarchyPanel>()})
+                                std::make_unique<HierarchyPanel>(m_editor_state, m_project_manager),
+                                std::make_unique<InspectorPanel>(m_editor_state, m_project_manager)})
                              {
 
 
@@ -37,19 +39,22 @@ namespace Engine
         }
     }
 
-    void EditorLayer::on_attach() {}
+    void EditorLayer::on_attach() {
+        GUID s_guid = m_project_manager->get_scene_manager()->create_scene();
+        m_project_manager->get_scene_manager()->set_open_scene_guid(s_guid);
+    }
 
     void EditorLayer::on_detach() {}
 
     void EditorLayer::on_update() {
-        m_renderer->begin_imgui();
+        m_renderer->begin_frame();
         create_ui_layer();
 
         for (auto& panel : m_editor_panels) {
             panel->on_imgui_render();
         }
 
-        m_renderer->end_imgui();
+        m_renderer->end_frame();
     }
 
 
@@ -70,9 +75,16 @@ namespace Engine
             ImGuiWindowFlags_NoNavFocus |
             ImGuiWindowFlags_MenuBar;
 
+
+        const float item_height = 24.0f;
+        const float bar_padding_y = 4.0f;
+        const float bar_height = item_height + bar_padding_y * 2.0f;
+        const float frame_pad_y = (bar_height - ImGui::GetFontSize()) * 0.5f;
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, frame_pad_y));
 
         ImGui::PushStyleColor(ImGuiCol_WindowBg, UIColors::background);
         ImGui::PushStyleColor(ImGuiCol_MenuBarBg, UIColors::background);
@@ -80,12 +92,17 @@ namespace Engine
         bool visible = ImGui::Begin("Main", nullptr, flags);
 
         ImGui::PopStyleColor(2);
-        ImGui::PopStyleVar(3);
-
+        ImGui::PopStyleVar(4);
 
         if (visible && ImGui::BeginMenuBar()) {
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            const float bar_top = ImGui::GetCursorPosY();
+            const float menu_bar_w = ImGui::GetWindowWidth();
+            const float text_h = ImGui::GetTextLineHeight();
+            const float item_y = bar_top + bar_padding_y;
+
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, frame_pad_y));
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGui::PushStyleVar(ImGuiStyleVar_MenuItemRounding, 0.0f);
 
             ImGui::PushStyleColor(ImGuiCol_Text, UIColors::text_disabled);
@@ -93,60 +110,50 @@ namespace Engine
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, UIColors::panel_hover);
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, UIColors::selection);
 
-            ImGui::Button("L", ImVec2(16.0, 16.0));
+            auto begin_top_menu = [&](const char* label) {
+                ImGui::SetCursorPosY(bar_top);
+                ImGui::AlignTextToFramePadding();
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, bar_height - text_h));
+                bool open = ImGui::BeginMenu(label);
+                ImGui::PopStyleVar();
+                return open;
+            };
 
-            if (ImGui::BeginMenu("Scene")) {
+            ImGui::SetCursorPosY(item_y);
+            ImGui::Button("L", ImVec2(28.0f, item_height));
+
+            if (begin_top_menu("Scene")) {
                 ImGui::PushStyleColor(ImGuiCol_Text, UIColors::text);
-
                 if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN " New Scene")) {
                 }
                 if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN "  Open Scene")) {
                 }
-
                 ImGui::PopStyleColor();
                 ImGui::EndMenu();
-
             }
-
-            if (ImGui::BeginMenu("Edit")) {
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::BeginMenu("View")) {
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::BeginMenu("Window")) {
-                ImGui::EndMenu();
-            }
-
-            float menu_bar_width = ImGui::GetWindowWidth();
-            float button_sizex = 32.0f;
-            float center_x = (menu_bar_width - button_sizex) * 0.5f;
-
-            ImGui::SetCursorPosX(center_x);
+            if (begin_top_menu("Edit"))   { ImGui::EndMenu(); }
+            if (begin_top_menu("View"))   { ImGui::EndMenu(); }
+            if (begin_top_menu("Window")) { ImGui::EndMenu(); }
 
             const char* icon = ICON_FA_PLAY;
-            ImVec2 button_size(32.0f, 32.0f);
-            ImVec2 icon_size = ImGui::CalcTextSize(icon);
-            ImVec2 button_pos = ImGui::GetCursorScreenPos();
+            const ImVec2 button_size(32.0f, item_height);
+
+            ImGui::SetCursorPos(ImVec2((menu_bar_w - button_size.x) * 0.5f, item_y));
 
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
-
             bool clicked = ImGui::Button("##Play", button_size);
-            bool hovered = ImGui::IsItemHovered();
-            bool active = ImGui::IsItemActive();
-
             ImGui::PopStyleColor(3);
 
-            ImVec4 icon_color = UIColors::text_disabled;
+            const bool hovered = ImGui::IsItemHovered();
+            const bool active  = ImGui::IsItemActive();
 
+            ImVec4 icon_color = UIColors::text_disabled;
             if (active) {
                 icon_color = UIColors::text;
             } else if (hovered) {
-                float t = 0.5f;
+                const float t = 0.5f;
                 icon_color = ImVec4(
                     UIColors::text_disabled.x + (UIColors::text.x - UIColors::text_disabled.x) * t,
                     UIColors::text_disabled.y + (UIColors::text.y - UIColors::text_disabled.y) * t,
@@ -155,11 +162,11 @@ namespace Engine
                 );
             }
 
-            float offset_x = (button_size.x - icon_size.x) * 0.5f;
-            float offset_y = (button_size.y - ImGui::GetTextLineHeight()) * 0.5f;
-
+            const ImVec2 icon_size = ImGui::CalcTextSize(icon);
+            const ImVec2 rect_min  = ImGui::GetItemRectMin();
             ImGui::GetWindowDrawList()->AddText(
-                ImVec2(button_pos.x + offset_x, button_pos.y + offset_y),
+                ImVec2(rect_min.x + (button_size.x - icon_size.x) * 0.5f,
+                       rect_min.y + (button_size.y - icon_size.y) * 0.5f),
                 ImGui::ColorConvertFloat4ToU32(icon_color),
                 icon
             );
@@ -168,15 +175,17 @@ namespace Engine
             }
 
             const char* breadcrumb = "Project Name > Scene 8";
-            float breadcrumb_width = ImGui::CalcTextSize(breadcrumb).x;
-            float breadcrumb_x = menu_bar_width - breadcrumb_width - 16.0f;
-
-            ImGui::SameLine();
-            ImGui::SetCursorPosX(breadcrumb_x);
-            ImGui::TextDisabled("%s", breadcrumb);
+            const ImVec2 bc_size = ImGui::CalcTextSize(breadcrumb);
+            const ImVec2 win_pos = ImGui::GetWindowPos();
+            ImGui::GetWindowDrawList()->AddText(
+                ImVec2(win_pos.x + menu_bar_w - bc_size.x - 16.0f,
+                       win_pos.y + bar_top + (bar_height - bc_size.y) * 0.5f),
+                ImGui::ColorConvertFloat4ToU32(UIColors::text_disabled),
+                breadcrumb
+            );
 
             ImGui::PopStyleColor(4);
-            ImGui::PopStyleVar(3);
+            ImGui::PopStyleVar(4);
 
             ImGui::EndMenuBar();
         }

@@ -9,7 +9,7 @@
 #include "systems/rendering/rhi/pipeline_state.h"
 
 #include <memory>
-namespace Engine::RHI::Metal {
+namespace Primitive::RHI::Metal {
 
     std::shared_ptr<IBuffer> MetalDevice::create_buffer(const BufferDesc& desc) {
         return std::make_shared<MetalBuffer>(metal_device_, desc);

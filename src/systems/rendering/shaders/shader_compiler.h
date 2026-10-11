@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-namespace Engine {
+namespace Primitive {
 
 class ShaderCompiler {
 public:

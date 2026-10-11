@@ -3,7 +3,7 @@
 #include "systems/display/iwindow.h"
 #include <memory>
 
-namespace Engine {
+namespace Primitive {
 
     class DisplaySystem {
     public:

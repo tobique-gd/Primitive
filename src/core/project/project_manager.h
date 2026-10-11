@@ -7,8 +7,7 @@
 #include <memory>
 #include <string>
 
-namespace Engine
-{
+namespace Primitive {
     class ProjectManager {
         public:
             ProjectManager() = default;
@@ -21,7 +20,7 @@ namespace Engine
 
             inline bool is_project_open() const { return !m_project_folder.empty(); }
             inline std::shared_ptr<SceneManager> get_scene_manager() const { return m_scene_manager; }
-            inline std::shared_ptr<AssetManager> get_asset_manager() const { return m_asset_manager; }
+            //inline std::shared_ptr<AssetManager> get_asset_manager() const { return m_asset_manager; }
 
             inline std::string get_project_name() { return m_project_folder.filename().string(); }
             inline std::filesystem::path get_project_folder() { return m_project_folder; }
@@ -30,8 +29,8 @@ namespace Engine
             std::filesystem::path m_project_folder;
             ProjectFile m_project_file;
 
-            std::shared_ptr<SceneManager> m_scene_manager = nullptr;
-            std::shared_ptr<AssetManager> m_asset_manager = nullptr;
+            std::shared_ptr<SceneManager> m_scene_manager = std::make_shared<SceneManager>();
+            //std::shared_ptr<AssetManager> m_asset_manager = std::make_shared<AssetManager>();
 
     };
 }

@@ -3,8 +3,7 @@
 
 #include "entrypoint.h"
 
-namespace Engine
-{
+namespace Primitive {
     class Editor : public Application
     {
     public:

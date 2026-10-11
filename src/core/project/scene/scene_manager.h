@@ -7,8 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace Engine
-{
+namespace Primitive {
     class SceneManager {
         public:
             SceneManager() = default;
@@ -20,6 +19,16 @@ namespace Engine
             bool set_open_scene_guid(GUID guid);
             GUID get_open_scene_guid() const;
             std::shared_ptr<Scene> get_open_scene() const;
+
+            inline std::shared_ptr<Scene> find_scene(GUID guid) const {
+    			if (guid == GUID::INVALID) {
+    				return nullptr;
+    			}
+    			if (auto it = m_scenes.find(guid); it != m_scenes.end()){
+    				return it->second;
+    			}
+    			return nullptr;
+    		}
 
         private:
             GUID m_open_scene_guid = GUID::INVALID;

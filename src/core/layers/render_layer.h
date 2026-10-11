@@ -1,16 +1,15 @@
 #pragma once
 
-#include "systems/rendering/irenderer.h"
 #include "core/layers/ilayer.h"
 #include "core/project/project_manager.h"
+#include "systems/rendering/rendering_system.h"
 
 #include <memory>
 
-namespace Engine
-{
+namespace Primitive {
     class RenderLayer : public ILayer {
         public:
-            RenderLayer(std::shared_ptr<IRenderer> renderer, std::shared_ptr<ProjectManager> project_manager);
+            RenderLayer(std::shared_ptr<RenderingSystem> renderer, std::shared_ptr<ProjectManager> project_manager);
 
             virtual void on_attach() override;
             virtual void on_detach() override;
@@ -19,6 +18,6 @@ namespace Engine
 
         private:
             std::shared_ptr<ProjectManager> m_project_manager;
-            std::shared_ptr<IRenderer> m_renderer;
+            std::shared_ptr<RenderingSystem> m_renderer;
     };
 }

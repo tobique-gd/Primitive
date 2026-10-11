@@ -4,8 +4,7 @@
 #include <core/events/ievent.h>
 #include <memory>
 
-namespace Engine
-{
+namespace Primitive {
     class ILayer{
         public:
             virtual ~ILayer() = default;

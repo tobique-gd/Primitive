@@ -8,7 +8,7 @@
 
 
 #include <memory>
-namespace Engine::RHI::Metal {
+namespace Primitive::RHI::Metal {
     class MetalDevice : public IDevice {
         public:
             MetalDevice(MTL::Device* device) {

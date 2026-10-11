@@ -2,13 +2,12 @@
 
 #include "core/application.h"
 
-namespace Engine
-{
+namespace Primitive {
     extern Application* create_application();
 }
 
 int main() {
-    Engine::Application* app = Engine::create_application();
+    Primitive::Application* app = Primitive::create_application();
     app->run();
     delete app;
 }

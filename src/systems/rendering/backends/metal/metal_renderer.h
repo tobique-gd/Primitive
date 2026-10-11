@@ -5,7 +5,7 @@
 
 
 #include "systems/display/iwindow.h"
-#include "systems/rendering/irenderer.h"
+#include "systems/rendering/rendering_system.h"
 #include "systems/rendering/rhi/texture_2d.h"
 
 namespace MTL {
@@ -15,10 +15,9 @@ namespace MTL {
 }
 
 
-namespace Engine
-{
+namespace Primitive {
 
-    class MetalRenderer : public IRenderer
+    class MetalRenderer : public RenderingSystem
     {
     public:
         MetalRenderer();
@@ -27,11 +26,12 @@ namespace Engine
         void init(IWindow& window) override;
         void shutdown() override;
 
-        void begin_imgui() override;
-        void end_imgui() override;
+        void begin_frame() override;
+        void end_frame() override;
 
-        std::shared_ptr<RHI::ITexture2D> render_viewport() override;
-        void render_frame() override;
+        void draw() override;
+
+        std::shared_ptr<RHI::ITexture2D> get_viewport_texture() override;
         void set_viewport_size(int width, int height) override;
         void on_window_resize(int width, int height) override;
 
@@ -45,7 +45,6 @@ namespace Engine
         void create_command_queue();
         void create_render_pipeline();
         void send_render_command();
-        void encode_render_command(MTL::RenderCommandEncoder* render_command_encoder);
 
         void create_buffers();
 
@@ -55,7 +54,6 @@ namespace Engine
         void create_internal_render_target();
 
         void update_render_pass_descriptor();
-        void init_ui(IWindow& window);
         void update_scene_transforms();
 
 

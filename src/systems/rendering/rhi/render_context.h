@@ -2,7 +2,7 @@
 
 #include "systems/rendering/rhi/command_list.h"
 
-namespace Engine::RHI {
+namespace Primitive::RHI {
 
     class RenderContext {
     public:

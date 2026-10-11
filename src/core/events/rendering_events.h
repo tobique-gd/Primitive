@@ -5,7 +5,7 @@
 #include "systems/rendering/rhi/texture_2d.h"
 #include <memory>
 
-namespace Engine {
+namespace Primitive {
     struct NewFrameRenderedEvent : public IEvent {
         std::shared_ptr<RHI::ITexture2D> frame;
 

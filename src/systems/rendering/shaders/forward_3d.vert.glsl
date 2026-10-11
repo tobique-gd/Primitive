@@ -26,11 +26,7 @@ void main()
 {
     VertexData vertex = vertexData[gl_VertexIndex];
 
-    gl_Position =
-        perspectiveMatrix *
-        viewMatrix *
-        modelMatrix *
-        vertex.position;
+    gl_Position = perspectiveMatrix * viewMatrix * modelMatrix * vertex.position;
 
     o_normal = normalize(transpose(inverse(mat3(modelMatrix))) * vertex.normal);
     o_tex_coord = vertex.textureCoordinate;

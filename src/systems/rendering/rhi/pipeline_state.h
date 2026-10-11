@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <Metal/Metal.hpp>
 
-namespace Engine::RHI
+namespace Primitive::RHI
 {
 
     enum class PrimitiveTopology {

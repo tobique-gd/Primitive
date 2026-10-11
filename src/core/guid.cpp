@@ -2,8 +2,7 @@
 
 #include <random>
 
-namespace Engine
-{
+namespace Primitive {
     GUID::GUID()
     {
         static std::random_device rd;

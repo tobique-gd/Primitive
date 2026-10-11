@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 #include <simd/simd.h>
 
 using namespace simd;
@@ -10,7 +11,7 @@ struct VertexData {
 };
 
 struct TransformationData {
-    float4x4 modelMatrix;
-    float4x4 viewMatrix;
-    float4x4 perspectiveMatrix;
+    glm::mat4x4 modelMatrix;
+    glm::mat4x4 viewMatrix;
+    glm::mat4x4 perspectiveMatrix;
 };

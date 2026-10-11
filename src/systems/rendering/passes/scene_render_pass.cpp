@@ -3,7 +3,7 @@
 
 #include "systems/rendering/rhi/command_list.h"
 
-namespace Engine {
+namespace Primitive {
 
     SceneRenderPass::SceneRenderPass(
         std::shared_ptr<RHI::IBuffer> vertex_buffer,

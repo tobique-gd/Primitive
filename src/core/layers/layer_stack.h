@@ -4,8 +4,7 @@
 #include "core/layers/ilayer.h"
 #include <memory>
 #include <vector>
-namespace Engine
-{
+namespace Primitive {
     class LayerStack : public IEventDispatcher {
         public:
             LayerStack() = default;

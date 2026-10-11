@@ -5,8 +5,7 @@
 #include <string>
 #include <glm/glm.hpp>
 
-namespace Engine
-{
+namespace Primitive {
     struct WindowProps {
         std::string title;
         int width, height;

@@ -1,7 +1,6 @@
 #pragma once
 
-namespace Engine
-{
+namespace Primitive {
     struct ProjectFile {
 
     };

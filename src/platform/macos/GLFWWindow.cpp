@@ -6,8 +6,7 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include <GLFW/glfw3native.h>
 
-namespace Engine
-{
+namespace Primitive {
     GLFWWindow::GLFWWindow(const WindowProps& props)
         : m_vsync(props.vsync)
     {

@@ -5,7 +5,7 @@
 #include "Metal/MTLRenderPipeline.hpp"
 #include "systems/rendering/rhi/pipeline_state.h"
 #include <string>
-namespace Engine::RHI {
+namespace Primitive::RHI {
     class MetalPipelineState : public IPipelineState {
         public:
             MetalPipelineState(MTL::RenderPipelineState* pso, MTL::DepthStencilState* depth_stecil, MTL::Winding winding, MTL::CullMode cull_mode, std::string debug_name)

@@ -4,8 +4,7 @@
 #include "editor/panels/ieditorpanel.h"
 #include <memory>
 
-namespace Engine
-{
+namespace Primitive {
     class ConsolePanel : public IEditorPanel {
         public:
             ConsolePanel() = default;

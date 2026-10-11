@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace Engine::RHI::Metal {
+namespace Primitive::RHI::Metal {
     class MetalCommandList : public ICommandList {
         public:
             explicit MetalCommandList(MTL::RenderCommandEncoder* encoder) : encoder_(encoder) {}
@@ -20,6 +20,7 @@ namespace Engine::RHI::Metal {
                 if (metal_pso->get_depth_stencil()) {
                     encoder_->setDepthStencilState(metal_pso->get_depth_stencil());
                 }
+                encoder_->setTriangleFillMode(MTL::TriangleFillModeLines);
                 encoder_->setFrontFacingWinding(metal_pso->get_winding());
                 encoder_->setCullMode(metal_pso->get_cull_mode());
             }

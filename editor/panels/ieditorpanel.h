@@ -2,14 +2,14 @@
 
 #include "core/events/ievent.h"
 #include "core/events/ieventdispatcher.h"
+#include "editor/editor_state.h"
 #include <memory>
 
-namespace Engine
-{
+namespace Primitive {
     class IEditorPanel {
         public:
             IEditorPanel() = default;
-            ~IEditorPanel() = default;
+            virtual ~IEditorPanel() = default;
             virtual void on_imgui_render() = 0;
             virtual void on_event(std::shared_ptr<IEvent> event) {};
 

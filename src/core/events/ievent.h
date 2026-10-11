@@ -2,7 +2,7 @@
 
 #include "core/events/event_type.h"
 
-namespace Engine {
+namespace Primitive {
 
     struct IEvent {
         virtual ~IEvent() = default;

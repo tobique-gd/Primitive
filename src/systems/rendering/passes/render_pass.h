@@ -4,7 +4,7 @@
 
 #include "systems/rendering/rhi/render_context.h"
 
-namespace Engine {
+namespace Primitive {
 
     class IRenderPass {
         public:

@@ -3,7 +3,7 @@
 #include "systems/rendering/rhi/buffer.h"
 #include "systems/rendering/rhi/pipeline_state.h"
 #include <memory>
-namespace Engine::RHI {
+namespace Primitive::RHI {
     class ICommandList {
         public:
             virtual ~ICommandList() = default;

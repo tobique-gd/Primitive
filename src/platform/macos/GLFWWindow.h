@@ -3,8 +3,7 @@
 #include "systems/display/iwindow.h"
 #include <GLFW/glfw3.h>
 
-namespace Engine
-{
+namespace Primitive {
     class GLFWWindow : public IWindow
     {
     public:

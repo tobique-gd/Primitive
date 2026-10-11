@@ -1,7 +1,6 @@
 #pragma once
 
-namespace Engine
-{
+namespace Primitive {
     enum EventType {
         KEY_PRESS,
         KEY_RELEASE,

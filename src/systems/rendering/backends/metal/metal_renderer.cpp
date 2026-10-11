@@ -6,22 +6,21 @@
 #include "Metal/MTLRenderCommandEncoder.hpp"
 #include "Metal/MTLRenderPass.hpp"
 #include "Metal/MTLResource.hpp"
+#include "drivers/metal/metal_swapchain.h"
+#include "drivers/metal/metal_ui_backend.h"
+#include "editor/ui/ui_context.h"
+#include <glm/glm.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include "glm/matrix.hpp"
 #include "platform/macos/cocoa_bridge.h"
 
-#include "editor/IconsFontAwesome6.h"
-
+#include "platform/macos/glfw_ui_backend.h"
 #include "systems/display/iwindow.h"
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_metal.h"
-#include "platform/macos/GLFWWindow.h"
-#include "systems/rendering/backends/metal/math_util.h"
-#include "systems/rendering/passes/render_pass.h"
 #include "systems/rendering/passes/scene_render_pass.h"
 #include "systems/rendering/rhi/framebuffer.h"
 #include "drivers/metal/metal_command_list.h"
 
-#include "editor/ui_context.h"
 #include "drivers/metal/metal_device.h"
 
 #include <CoreGraphics/CoreGraphics.h>
@@ -31,6 +30,7 @@
 #include "systems/rendering/rhi/buffer.h"
 #include "systems/rendering/rhi/device.h"
 #include "systems/rendering/rhi/pipeline_state.h"
+#include "systems/rendering/rhi/swapchain.h"
 #include "systems/rendering/rhi/texture_2d.h"
 #include "systems/rendering/shaders/shader_compiler.h"
 #include "vertex_data.h"
@@ -43,14 +43,11 @@
 #include <simd/simd.h>
 #include <cmath>
 
-namespace Engine
-{
+namespace Primitive {
     struct MetalRenderer::Impl {
         MTL::Device* raw_metal_device = nullptr;
         std::unique_ptr<RHI::IDevice> rhi_device;
 
-        CA::MetalLayer* metal_layer = nullptr;
-        CA::MetalDrawable* metal_drawable = nullptr;
         MTL::CommandQueue* metal_command_queue = nullptr;
         MTL::CommandBuffer* metal_command_buffer = nullptr;
 
@@ -65,18 +62,16 @@ namespace Engine
         MTL::Library* metal_vertex_library = nullptr;
         MTL::Library* metal_fragment_library = nullptr;
 
-        MTL::RenderPassDescriptor* render_pass_descriptor = nullptr;
-        MTL::RenderPassDescriptor* ui_render_pass_descriptor = nullptr;
-
-        MTL::Texture* msaa_render_target_texture = nullptr;
-        MTL::Texture* depth_texture = nullptr;
-
-        void* cocoa_window = nullptr;
-        glm::ivec2 frame_buffer_size;
         glm::ivec2 viewport_size = {1, 1};
-        int sample_count = 2;
+        int sample_count = 4;
 
         std::unique_ptr<SceneRenderPass> m_scene_render_pass;
+        std::unique_ptr<UIContext> ui;
+
+        std::unique_ptr<RHI::ISwapchain> swapchain;
+        NS::AutoreleasePool* frame_pool = nullptr;
+        MTL::RenderPassDescriptor* ui_pass_descriptor = nullptr;
+        bool frame_active = false;
     };
 
     MetalRenderer::MetalRenderer() : metal_backend( new Impl() ) {}
@@ -105,17 +100,21 @@ namespace Engine
         init_device();
         init_window(window);
         create_buffers();
-        init_ui(window);
+
+        metal_backend->ui = std::make_unique<UIContext>(std::make_unique<GLFWUIBackend>(), std::make_unique<RHI::Metal::MetalUIBackend>(metal_backend->raw_metal_device));
+        metal_backend->ui->init(window);
 
         create_cube();
         create_default_library();
         create_command_queue();
 
+        const auto color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
+
         RHI::FramebufferDesc fb_desc{};
         fb_desc.width = metal_backend->viewport_size.x;
         fb_desc.height = metal_backend->viewport_size.y;
         fb_desc.sample_count = metal_backend->sample_count;
-        fb_desc.color_attachment.format = metal_backend->metal_layer->pixelFormat();
+        fb_desc.color_attachment.format = color_format;
         fb_desc.depth_attachment.format = MTL::PixelFormatDepth32Float;
 
         metal_backend->framebuffer = metal_backend->rhi_device->create_framebuffer(fb_desc);
@@ -132,53 +131,6 @@ namespace Engine
 
     }
 
-    void MetalRenderer::init_ui(IWindow& window) {
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-        ImFontConfig font_config;
-        font_config.FontDataOwnedByAtlas = false;
-
-        io.Fonts->AddFontFromFileTTF(
-            "assets/fonts/IBMPlexSans-Regular.ttf",
-            16.0f
-        );
-
-        static const ImWchar icons_ranges[] = {
-            ICON_MIN_FA,
-            ICON_MAX_16_FA,
-            0
-        };
-
-        ImFontConfig icons_config;
-        icons_config.MergeMode = true;
-        icons_config.PixelSnapH = true;
-
-        io.Fonts->AddFontFromFileTTF(
-            FONT_ICON_FILE_NAME_FAS,
-            16.0f,
-            &icons_config,
-            icons_ranges
-        );
-
-        UIStyle::setup_ui_style();
-
-        auto* glfw_window = dynamic_cast<GLFWWindow*>(&window);
-
-        if (!glfw_window)
-            throw std::runtime_error("MetalRenderer requires GLFWwindow");
-
-        ImGui_ImplGlfw_InitForOther(
-            glfw_window->get_glfw_window(),
-            true
-        );
-
-        ImGui_ImplMetal_Init(metal_backend->raw_metal_device);
-    }
-
 
     void MetalRenderer::init_device()
     {
@@ -188,28 +140,16 @@ namespace Engine
 
     void MetalRenderer::init_window(IWindow& window)
     {
-        void* native_window_handle = window.get_native_window();
         glm::ivec2 size = window.get_frame_buffer_size();
-        metal_backend->frame_buffer_size = size;
 
-        if (!native_window_handle)
-            throw std::runtime_error("Invalid native window handle");
+        RHI::SwapchainDesc desc{};
+        desc.native_window = window.get_native_window();
+        desc.width = size.x;
+        desc.height = size.y;
+        desc.vsync = window.is_vsync();
 
-        if (!metal_backend->raw_metal_device)
-            throw std::runtime_error("Metal device is not initialized");
+        metal_backend->swapchain = std::make_unique<RHI::Metal::MetalSwapchain>( metal_backend->raw_metal_device, desc);
 
-        metal_backend->metal_layer = CA::MetalLayer::layer();
-
-        if (!metal_backend->metal_layer)
-            throw std::runtime_error("Failed to create Metal layer");
-
-        metal_backend->metal_layer->setDevice(metal_backend->raw_metal_device);
-        metal_backend->metal_layer->setPixelFormat(MTL::PixelFormatBGRA8Unorm);
-        metal_backend->metal_layer->setDrawableSize(CGSizeMake(size.x, size.y));
-
-        metal_backend->cocoa_window = native_window_handle;
-
-        CocoaBridge::AddLayerToWindow(metal_backend->cocoa_window, metal_backend->metal_layer);
     }
 
     void MetalRenderer::create_default_library() {
@@ -265,96 +205,80 @@ namespace Engine
 
     void MetalRenderer::shutdown()
     {
-        if (!metal_backend)
+        if (!metal_backend || !metal_backend->raw_metal_device)
             return;
 
-        if (metal_backend->raw_metal_device)
-        {
-            metal_backend->raw_metal_device->release();
-            metal_backend->raw_metal_device = nullptr;
+        auto& m = *metal_backend;
+
+        if (m.metal_command_queue) {
+            if (auto* cmd = m.metal_command_queue->commandBuffer()) {
+                cmd->commit();
+                cmd->waitUntilCompleted();
+            }
         }
 
-        metal_backend->msaa_render_target_texture->release();
-        metal_backend->depth_texture->release();
-        metal_backend->render_pass_descriptor->release();
+        m.m_scene_render_pass.reset();
+        m.pipeline_state.reset();
+        m.framebuffer.reset();
+        m.vertex_buffer.reset();
+        m.index_buffer.reset();
+        m.transform_buffer.reset();
+
+        m.ui.reset();
+        m.swapchain.reset();
+
+        if (m.metal_vertex_library)   { m.metal_vertex_library->release();   m.metal_vertex_library = nullptr; }
+        if (m.metal_fragment_library) { m.metal_fragment_library->release(); m.metal_fragment_library = nullptr; }
+        if (m.metal_command_queue)    { m.metal_command_queue->release();    m.metal_command_queue = nullptr; }
+
+        m.rhi_device.reset();
+
+        m.raw_metal_device->release();
+        m.raw_metal_device = nullptr;
     }
 
-    void MetalRenderer::begin_imgui()
+
+    void MetalRenderer::begin_frame()
     {
-        metal_backend->metal_drawable = metal_backend->metal_layer->nextDrawable();
+        auto& m = *metal_backend;
 
+        m.frame_pool = NS::AutoreleasePool::alloc()->init();
+        m.frame_active = m.swapchain->acquire_next_frame();
 
-        if (!metal_backend->metal_drawable) return;
-
-        metal_backend->ui_render_pass_descriptor = MTL::RenderPassDescriptor::alloc()->init();
-
-        auto* color = metal_backend->ui_render_pass_descriptor->colorAttachments()->object(0);
-
-        color->setTexture(metal_backend->metal_drawable->texture());
-        color->setLoadAction(MTL::LoadActionClear);
-        color->setStoreAction(MTL::StoreActionStore);
-        color->setClearColor(MTL::ClearColor(0,0,0,1));
-
-        ImGui_ImplGlfw_NewFrame();
-        ImGui_ImplMetal_NewFrame(metal_backend->ui_render_pass_descriptor);
-        ImGui::NewFrame();
-
-    }
-
-    void MetalRenderer::end_imgui()
-    {
-        ImGui::Render();
-
-        auto* command_buffer = metal_backend->metal_command_queue->commandBuffer();
-
-        auto* encoder = command_buffer->renderCommandEncoder(metal_backend->ui_render_pass_descriptor);
-        ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), command_buffer, encoder);
-
-        encoder->endEncoding();
-
-        command_buffer->presentDrawable(metal_backend->metal_drawable);
-        command_buffer->commit();
-
-        metal_backend->ui_render_pass_descriptor->release();
-        metal_backend->ui_render_pass_descriptor = nullptr;
-
-    }
-
-    void MetalRenderer::render_frame()
-    {
-        metal_backend->metal_drawable =
-            metal_backend->metal_layer->nextDrawable();
-
-        if (!metal_backend->metal_drawable)
+        if (!m.frame_active)
             return;
 
-        MTL::RenderPassDescriptor* descriptor = MTL::RenderPassDescriptor::alloc()->init();
+        m.ui_pass_descriptor = static_cast<MTL::RenderPassDescriptor*>(m.swapchain->get_native_render_pass_descriptor(RHI::LoadOp::Clear));
 
-        auto* color = descriptor->colorAttachments()->object(0);
+        m.ui->begin_frame(m.ui_pass_descriptor);
+    }
 
-        color->setTexture(metal_backend->metal_drawable->texture());
-        color->setLoadAction(MTL::LoadActionClear);
-        color->setStoreAction(MTL::StoreActionStore);
-        color->setClearColor(MTL::ClearColor(0, 0, 0, 1));
 
-        auto* command_buffer =
-            metal_backend->metal_command_queue->commandBuffer();
+    void MetalRenderer::end_frame()
+    {
+        auto& m = *metal_backend;
 
-        auto* encoder =
-            command_buffer->renderCommandEncoder(descriptor);
+        if (m.frame_active)
+        {
+            m.ui->end_frame();
 
-        ImGui_ImplMetal_RenderDrawData(
-            ImGui::GetDrawData(),
-            command_buffer,
-            encoder
-        );
+            auto* command_buffer = m.metal_command_queue->commandBuffer();
+            auto* encoder = command_buffer->renderCommandEncoder(m.ui_pass_descriptor);
 
-        encoder->endEncoding();
+            m.ui->render(command_buffer, encoder);
 
-        command_buffer->presentDrawable(metal_backend->metal_drawable);
-        command_buffer->commit();
+            encoder->endEncoding();
+            m.swapchain->present(command_buffer);
+            command_buffer->commit();
+        }
 
-        descriptor->release();
+        m.frame_active = false;
+        m.ui_pass_descriptor = nullptr;
+
+        if (m.frame_pool) {
+            m.frame_pool->release();
+            m.frame_pool = nullptr;
+        }
     }
 
     void MetalRenderer::on_window_resize(int width, int height)
@@ -362,17 +286,12 @@ namespace Engine
         if (width <= 0 || height <= 0)
             return;
 
-        metal_backend->frame_buffer_size = { width, height };
-
-        if (metal_backend->metal_layer)
-        {
-            metal_backend->metal_layer->setDrawableSize(CGSizeMake(width, height));
-        }
+        metal_backend->swapchain->resize(width, height);
     }
 
-    std::shared_ptr<RHI::ITexture2D> MetalRenderer::render_viewport()
-    {
-        if (!metal_backend || !metal_backend->framebuffer) return nullptr;
+
+    void MetalRenderer::draw() {
+        if (!metal_backend || !metal_backend->framebuffer) return;
 
         NS::AutoreleasePool* frame_pool = NS::AutoreleasePool::alloc()->init();
 
@@ -380,26 +299,29 @@ namespace Engine
 
         frame_pool->release();
 
+    }
+
+    std::shared_ptr<RHI::ITexture2D> MetalRenderer::get_viewport_texture()
+    {
         return std::static_pointer_cast<RHI::ITexture2D>(metal_backend->framebuffer->get_color_attachment());
-
-
     }
 
     void MetalRenderer::update_scene_transforms() {
-        matrix_float4x4 translation_matrix = matrix4x4_translation(0, 0, -1.0f);
+        glm::mat4x4 transform = glm::mat4x4(1.0f);
+        transform = glm::translate(transform, glm::vec3(0, 0, -1.0f));
+
         float angle_in_degrees = 45.0f * glfwGetTime() / 2.0;
         float angle_in_radians = angle_in_degrees * M_PI / 180.0f;
-        matrix_float4x4 rotation_matrix = matrix4x4_rotation(angle_in_radians, 1.0f, 1.0f, 1.0f);
-        matrix_float4x4 model_matrix = simd_mul(translation_matrix, rotation_matrix);
+        transform = glm::rotate(transform, angle_in_radians, glm::vec3(1.0f, 1.0f, 1.0f));
+        glm::mat4x4 model_matrix = transform;
 
-        simd::float3 R = {1, 0, 0}, U = {0, 1, 0}, F = {0, 0, -1}, P = {0, 0, 1};
+        glm::vec3 R = {1, 0, 0}, U = {0, 1, 0}, F = {0, 0, -1}, P = {0, 0, 1};
 
-        matrix_float4x4 view_matrix =
-            matrix_make_rows(
-                R.x, R.y, R.z, dot(-R, P),
-                U.x, U.y, U.z, dot(-U, P),
-                -F.x, -F.y, -F.z, dot(F, P),
-                0, 0, 0, 1
+        glm::mat4x4 view_matrix = glm::mat4x4(
+                glm::vec4(R.x, U.x, -F.x, 0.0f),
+                glm::vec4(R.y, U.y, -F.y, 0.0f),
+                glm::vec4(R.z, U.z, -F.z, 0.0f),
+                glm::vec4(dot(-R, P), dot(-U, P), dot(F, P), 1.0f)
             );
 
         float width = metal_backend->viewport_size.x;
@@ -411,7 +333,7 @@ namespace Engine
         float near_z = 0.1f;
         float far_z = 100.0f;
 
-        matrix_float4x4 perspective_matrix = matrix_perspective_right_hand( fov, aspect_ratio, near_z,far_z);
+        glm::mat4x4 perspective_matrix = glm::perspectiveRH_ZO(fov, aspect_ratio, near_z, far_z); // matrix_perspective_right_hand( fov, aspect_ratio, near_z,far_z);
 
         TransformationData transformation_data = {
             model_matrix,
@@ -437,25 +359,6 @@ namespace Engine
 
         encoder->endEncoding();
         metal_backend->metal_command_buffer->commit();
-
-
-
-    }
-
-
-
-    void MetalRenderer::encode_render_command(MTL::RenderCommandEncoder* raw_encoder)
-    {
-        RHI::Metal::MetalCommandList cmd(raw_encoder);
-
-        update_scene_transforms();
-
-        cmd.set_pipeline_state(metal_backend->pipeline_state);
-        cmd.set_vertex_buffer(metal_backend->vertex_buffer, 0);
-        cmd.set_vertex_buffer(metal_backend->transform_buffer, 1);
-        cmd.set_index_buffer(metal_backend->index_buffer);
-
-        cmd.draw_indexed(36, 0);
 
 
 
@@ -547,7 +450,7 @@ namespace Engine
         RHI::PipelineDesc pso_desc{};
         pso_desc.vertex_shader = vertex_fn;
         pso_desc.fragment_shader = fragment_fn;
-        pso_desc.color_format = metal_backend->metal_layer->pixelFormat();
+        pso_desc.color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
         pso_desc.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc.sample_count = metal_backend->sample_count;
         pso_desc.depth_stencil.depth_write_enable = true;

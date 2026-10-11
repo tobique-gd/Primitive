@@ -4,8 +4,7 @@
 #include <memory>
 #include <algorithm>
 
-namespace Engine
-{
+namespace Primitive {
     void LayerStack::on_update() {
         for (const auto& layer : m_layers) {
             layer->on_update();

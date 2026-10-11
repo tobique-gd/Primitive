@@ -5,7 +5,7 @@
 #include "systems/rendering/rhi/pipeline_state.h"
 #include <memory>
 
-namespace Engine::RHI {
+namespace Primitive::RHI {
     class IDevice {
         public:
             virtual ~IDevice() = default;

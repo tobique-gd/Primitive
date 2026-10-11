@@ -2,7 +2,7 @@
 #include "GLFW/glfw3.h"
 #include "platform/macos/GLFWWindow.h"
 
-namespace Engine {
+namespace Primitive {
 
     DisplaySystem::DisplaySystem() {
         if (!glfwInit()) {

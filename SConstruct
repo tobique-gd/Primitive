@@ -6,7 +6,7 @@ env = Environment(
 
 env.Append(
     CCFLAGS=['-O2', '-Wall'],
-    CXXFLAGS=['-std=c++17']
+    CXXFLAGS=['-std=c++20']
 )
 
 env.Append(CPPPATH=[
@@ -42,19 +42,31 @@ source_files = [
     'editor/layers/editor_layer.cpp',
     'src/core/layers/render_layer.cpp',
 
+    'src/core/project/scene/scene_manager.cpp',
+    'src/core/project/scene/scene.cpp',
+
     'editor/panels/viewport_panel.cpp',
     'editor/panels/console_panel.cpp',
     'editor/panels/hierarchy_panel.cpp',
+    'editor/panels/inspector_panel.cpp',
+
+    'editor/ui/ui_context.cpp',
 
     'src/platform/macos/GLFWWindow.cpp',
+    'src/platform/macos/glfw_ui_backend.cpp',
+
 
     'src/systems/rendering/backends/metal/metal_renderer.cpp',
     'src/systems/rendering/passes/scene_render_pass.cpp',
     'src/platform/macos/cocoa_bridge.mm',
     'src/systems/rendering/backends/metal/mtl_impl.cpp',
 
+
     'src/drivers/metal/metal_device.cpp',
     'src/drivers/metal/metal_framebuffer.cpp',
+    'src/drivers/metal/metal_ui_backend.cpp',
+    'src/drivers/metal/metal_swapchain.cpp',
+
 
     'src/systems/rendering/shaders/shader_compiler.cpp',
 

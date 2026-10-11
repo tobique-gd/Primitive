@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace Engine::RHI
+namespace Primitive::RHI
 {
     class ITexture2D {
         public:

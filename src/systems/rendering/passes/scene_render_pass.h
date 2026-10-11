@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace Engine {
+namespace Primitive {
 
     class SceneRenderPass final : public IRenderPass {
     public:

@@ -3,7 +3,7 @@
 #include "core/events/event_type.h"
 #include "core/events/ievent.h"
 
-namespace Engine {
+namespace Primitive {
 
     struct WindowResizeEvent : public IEvent {
         int width;

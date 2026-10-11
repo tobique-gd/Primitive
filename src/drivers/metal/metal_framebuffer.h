@@ -5,7 +5,7 @@
 #include <memory>
 #include <Metal/Metal.hpp>
 
-namespace Engine::RHI::Metal {
+namespace Primitive::RHI::Metal {
     class MetalFramebuffer : public IFramebuffer {
         public:
             MetalFramebuffer(MTL::Device* device, const FramebufferDesc& desc);

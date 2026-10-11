@@ -11,7 +11,7 @@
 #include <iostream>
 #include <filesystem>
 
-namespace Engine {
+namespace Primitive {
 
     namespace {
         EShLanguage detect_glslang_stage(const std::string& stage) {

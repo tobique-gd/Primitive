@@ -3,8 +3,7 @@
 #include "core/events/ievent.h"
 
 #include <memory>
-namespace Engine
-{
+namespace Primitive {
     class IEventDispatcher {
         public:
             virtual ~IEventDispatcher() = default;

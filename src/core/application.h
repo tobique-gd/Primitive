@@ -7,17 +7,15 @@
 #include <memory>
 #include <shared_mutex>
 #include "systems/rendering/backends/metal/metal_renderer.h"
-#include "systems/rendering/irenderer.h"
 #include "systems/display/display_system.h"
+#include "systems/rendering/rendering_system.h"
 
-namespace Engine
-{
+namespace Primitive {
     class Application
     {
     public:
         Application()
         {
-            //Platform::init();
             _display_system = std::make_shared<DisplaySystem>();
             _window = _display_system->create_window();
             _window->set_event_callback([this](IEvent& e) { on_event(e); });
@@ -58,7 +56,7 @@ namespace Engine
         std::shared_ptr<IWindow> _window;
         std::shared_ptr<LayerStack> _layer_stack;
         std::shared_ptr<ProjectManager> _project_manager;
-        std::shared_ptr<IRenderer> _renderer;
+        std::shared_ptr<RenderingSystem> _renderer;
         std::shared_ptr<DisplaySystem> _display_system;
     };
 }

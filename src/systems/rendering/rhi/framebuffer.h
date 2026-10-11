@@ -4,7 +4,7 @@
 #include <memory>
 #include <glm/vec4.hpp>
 
-namespace Engine::RHI {
+namespace Primitive::RHI {
 
     enum class FramebufferType {
         Offscreen,
