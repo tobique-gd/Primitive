@@ -72,11 +72,11 @@ std::vector<uint32_t> ShaderCompiler::compile_glsl_to_spirv(
             glslang::EShSourceGlsl,
             glslang_stage,
             glslang::EShClientVulkan,
-            450
+            460
         );
         shader.setEnvClient(
             glslang::EShClientVulkan,
-            glslang::EShTargetVulkan_1_2
+            glslang::EShTargetVulkan_1_3
         );
         shader.setEnvTarget(
             glslang::EShTargetSpv,
@@ -87,10 +87,10 @@ std::vector<uint32_t> ShaderCompiler::compile_glsl_to_spirv(
 
         if (!shader.parse(
             resources,
-            450,
+            460,
             false,
             static_cast<EShMessages>(
-                EShMsgDefault | EShMsgSpvRules | EShMsgVulkanRules
+                EShMsgDefault | EShMsgSpvRules | EShMsgVulkanRules | EShMsgEnhanced
             )
         )) {
             last_error_ =
@@ -148,6 +148,7 @@ std::string ShaderCompiler::translate_spirv_to_msl(
         spirv_cross::CompilerMSL compiler(spirv_code);
 
         spirv_cross::CompilerMSL::Options options;
+        options.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(3, 0, 0);
         options.platform = spirv_cross::CompilerMSL::Options::macOS;
         compiler.set_msl_options(options);
 

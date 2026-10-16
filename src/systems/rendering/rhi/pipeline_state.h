@@ -7,6 +7,10 @@
 
 namespace Primitive
 {
+    enum class PipelineType {
+        Standard,
+        Mesh
+    };
 
     enum class PrimitiveTopology {
         TriangleList,
@@ -81,6 +85,13 @@ namespace Primitive
     struct PipelineDesc {
         void* vertex_shader = nullptr;
         void* fragment_shader = nullptr;
+        void* mesh_shader = nullptr;
+        void* task_shader = nullptr;
+
+        PipelineType pipeline_type;
+        uint32_t threadgroups_per_grid;
+        uint32_t threads_per_threadgroup;
+        uint32_t task_threads_per_threadgroup;
 
         RasterizerDesc rasterizer;
         DepthStencilDesc depth_stencil;

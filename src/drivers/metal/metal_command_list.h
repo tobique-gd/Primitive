@@ -47,6 +47,11 @@ namespace Primitive {
                 encoder_->setVertexBuffer(std::static_pointer_cast<MetalBuffer>(buffer)->get_native_handle(), 0, index);
             }
 
+            void set_mesh_buffer(std::shared_ptr<IBuffer> buffer, uint32_t index) override {
+
+                encoder_->setMeshBuffer(std::static_pointer_cast<MetalBuffer>(buffer)->get_native_handle(), 0, index);
+            }
+
             void set_index_buffer(std::shared_ptr<IBuffer> buffer) override {
                 bound_index_buffer_ = std::static_pointer_cast<MetalBuffer>(buffer);
             }
@@ -56,6 +61,10 @@ namespace Primitive {
 
                 size_t offset = first_index * sizeof(uint32_t);
                 encoder_->drawIndexedPrimitives(MTL::PrimitiveTypeTriangle, index_count, MTL::IndexTypeUInt32, bound_index_buffer_->get_native_handle(), offset);
+            }
+
+            void draw_mesh_threadgroups(MTL::Size threadgroups_per_grid, MTL::Size threads_per_threadgroup, MTL::Size object_threads_per_threadgroup) override {
+                encoder_->drawMeshThreadgroups(threadgroups_per_grid, threads_per_threadgroup, object_threads_per_threadgroup);
             }
 
             void draw(uint32_t vertex_count, uint32_t first_vertex) override {

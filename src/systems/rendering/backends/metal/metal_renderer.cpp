@@ -195,26 +195,48 @@ namespace Primitive {
 
         metal_backend->framebuffer = metal_backend->rhi_device->create_framebuffer(fb_desc);
 
-        MTL::MeshRenderPipelineDescriptor* mesh_pipeline = MTL::MeshRenderPipelineDescriptor::alloc()->init();
 
         MTL::Function* mesh_fn = metal_backend->metal_mesh_library->newFunction(NS::String::string("main0", NS::ASCIIStringEncoding));
         MTL::Function* vertex_fn = metal_backend->sky_vertex_library->newFunction(NS::String::string("main0", NS::ASCIIStringEncoding));
         MTL::Function* fragment_fn = metal_backend->sky_fragment_library->newFunction(NS::String::string("main0", NS::ASCIIStringEncoding));
+        MTL::Function* scene_fragment_fn = metal_backend->metal_fragment_library->newFunction(NS::String::string("main0", NS::ASCIIStringEncoding));
 
-        mesh_pipeline->setMeshFunction(mesh_fn);
-        mesh_pipeline->setFragmentFunction(fragment_fn);
         NS::Error* error = nullptr;
 
-        MTL::RenderPipelineState* pso = metal_backend->raw_metal_device->newRenderPipelineState(mesh_pipeline, MTL::PipelineOptionNone, nullptr, &error);
+        auto& m = *metal_backend;
+
+        m.metal_command_buffer =
+            m.metal_command_queue->commandBuffer();
+
+        auto* pass_desc = static_cast<MTL::RenderPassDescriptor*>(
+            m.framebuffer->get_native_render_pass_descriptor()
+        );
+
+        auto* encoder =m.metal_command_buffer->renderCommandEncoder(pass_desc);
+
+        MetalCommandList command_list(encoder);
+
+        RenderContext context(command_list);
 
 
         create_render_pipeline();
+
+        PipelineDesc pso_desc{};
+        pso_desc.mesh_shader = mesh_fn;
+        pso_desc.fragment_shader = scene_fragment_fn;
+        pso_desc.color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
+        pso_desc.depth_format = MTL::PixelFormatDepth32Float;
+        pso_desc.sample_count = metal_backend->sample_count;
+        pso_desc.depth_stencil.depth_write_enable = true;
+        pso_desc.pipeline_type = PipelineType::Mesh;
+
+        auto pso = metal_backend->rhi_device->create_pipeline_state(pso_desc);
 
         metal_backend->m_scene_render_pass = std::make_unique<SceneRenderPass>(
             metal_backend->vertex_buffer,
             metal_backend->index_buffer,
             metal_backend->transform_buffer,
-            metal_backend->pipeline_state
+            pso
         );
 
         PipelineDesc pso_desc2{};
@@ -224,11 +246,14 @@ namespace Primitive {
         pso_desc2.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc2.sample_count = metal_backend->sample_count;
         pso_desc2.depth_stencil.depth_write_enable = false;
+        pso_desc2.pipeline_type = PipelineType::Standard;
 
         metal_backend->sky_pipeline_state = metal_backend->rhi_device->create_pipeline_state(pso_desc2);
 
         vertex_fn->release();
         fragment_fn->release();
+        mesh_fn->release();
+        scene_fragment_fn->release();
 
         BufferDesc transform_desc{};
         transform_desc.size = sizeof(TransformationData);
@@ -324,8 +349,6 @@ namespace Primitive {
         transform_desc.debug_name = "TransformBuffer";
 
         metal_backend->transform_buffer = metal_backend->rhi_device->create_buffer(transform_desc);
-
-
     }
 
 
@@ -344,6 +367,7 @@ namespace Primitive {
         pso_desc.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc.sample_count = metal_backend->sample_count;
         pso_desc.depth_stencil.depth_write_enable = true;
+        pso_desc.pipeline_type = PipelineType::Standard;
 
         metal_backend->pipeline_state = metal_backend->rhi_device->create_pipeline_state(pso_desc);
 
@@ -449,18 +473,13 @@ namespace Primitive {
     {
         auto& m = *metal_backend;
 
-        m.metal_command_buffer =
-            m.metal_command_queue->commandBuffer();
+        m.metal_command_buffer = m.metal_command_queue->commandBuffer();
 
-        auto* pass_desc = static_cast<MTL::RenderPassDescriptor*>(
-            m.framebuffer->get_native_render_pass_descriptor()
-        );
+        auto* pass_desc = static_cast<MTL::RenderPassDescriptor*>(m.framebuffer->get_native_render_pass_descriptor());
 
         auto* encoder =m.metal_command_buffer->renderCommandEncoder(pass_desc);
 
         MetalCommandList command_list(encoder);
-
-
 
         RenderContext context(command_list);
 
@@ -479,13 +498,13 @@ namespace Primitive {
             }
         });
 
-        graph.add_pass({
+        /* graph.add_pass({
             .name = "Sky",
             .setup = [scene_color](RenderGraphBuilder& builder) {
                 builder.write(scene_color);
             },
             .execute = [&m](RenderContext& context) {m.m_sky_pass->execute(context); }
-        });
+        }); */
 
 
         graph.add_pass({

@@ -57,48 +57,101 @@ namespace Primitive {
     }
 
     std::shared_ptr<IPipelineState> MetalDevice::create_pipeline_state(const PipelineDesc& desc) {
-        auto vertex_function = static_cast<MTL::Function*>(desc.vertex_shader);
-        auto fragment_function = static_cast<MTL::Function*>(desc.fragment_shader);
+        if (desc.pipeline_type == PipelineType::Standard) {
+            auto vertex_function = static_cast<MTL::Function*>(desc.vertex_shader);
+            auto fragment_function = static_cast<MTL::Function*>(desc.fragment_shader);
 
-        auto* pso_desc = MTL::RenderPipelineDescriptor::alloc()->init();
-        pso_desc->setVertexFunction(vertex_function);
-        pso_desc->setFragmentFunction(fragment_function);
-        pso_desc->colorAttachments()->object(0)->setPixelFormat(static_cast<MTL::PixelFormat>(desc.color_format));
-        pso_desc->setSampleCount(desc.sample_count);
-        pso_desc->setDepthAttachmentPixelFormat(static_cast<MTL::PixelFormat>(desc.depth_format));
+            auto* pso_desc = MTL::RenderPipelineDescriptor::alloc()->init();
+            pso_desc->setVertexFunction(vertex_function);
+            pso_desc->setFragmentFunction(fragment_function);
+            pso_desc->colorAttachments()->object(0)->setPixelFormat(static_cast<MTL::PixelFormat>(desc.color_format));
+            pso_desc->setSampleCount(desc.sample_count);
+            pso_desc->setDepthAttachmentPixelFormat(static_cast<MTL::PixelFormat>(desc.depth_format));
 
-        NS::Error* error = nullptr;
-        MTL::RenderPipelineState* pso =
-            metal_device_->newRenderPipelineState(pso_desc, &error);
+            NS::Error* error = nullptr;
+            MTL::RenderPipelineState* pso =
+                metal_device_->newRenderPipelineState(pso_desc, &error);
 
 
-        if (!pso) {
-            std::cerr << "Failed to create pipeline '"
-                      << desc.debug_name << "': "
-                      << (error ? error->localizedDescription()->utf8String()
-                                : "Unknown Metal error")
-                      << '\n';
+            if (!pso) {
+                std::cerr << "Failed to create pipeline '"
+                            << desc.debug_name << "': "
+                            << (error ? error->localizedDescription()->utf8String()
+                                    : "Unknown Metal error")
+                            << '\n';
+
+                pso_desc->release();
+                return nullptr;
+            }
 
             pso_desc->release();
-            return nullptr;
-        }
 
-        pso_desc->release();
+            MTL::DepthStencilState* dss = nullptr;
+            if (desc.depth_stencil.depth_test_enable) {
+                auto* depth_stencil_descriptor = MTL::DepthStencilDescriptor::alloc()->init();
+                depth_stencil_descriptor->setDepthCompareFunction(to_metal_compare_function(desc.depth_stencil.depth_compare_op));
+                depth_stencil_descriptor->setDepthWriteEnabled(desc.depth_stencil.depth_write_enable);
+                dss = metal_device_->newDepthStencilState(depth_stencil_descriptor);
+                depth_stencil_descriptor->release();
+            }
 
-        MTL::DepthStencilState* dss = nullptr;
-        if (desc.depth_stencil.depth_test_enable) {
-            auto* depth_stencil_descriptor = MTL::DepthStencilDescriptor::alloc()->init();
-            depth_stencil_descriptor->setDepthCompareFunction(to_metal_compare_function(desc.depth_stencil.depth_compare_op));
-            depth_stencil_descriptor->setDepthWriteEnabled(desc.depth_stencil.depth_write_enable);
-            dss = metal_device_->newDepthStencilState(depth_stencil_descriptor);
-            depth_stencil_descriptor->release();
-        }
+            MTL::Winding winding = (desc.rasterizer.winding_order == WindingOrder::Clockwise) ? MTL::WindingClockwise : MTL::WindingCounterClockwise;
 
-        MTL::Winding winding = (desc.rasterizer.winding_order == WindingOrder::Clockwise) ? MTL::WindingClockwise : MTL::WindingCounterClockwise;
+            //MTL::CullMode cull = (desc.rasterizer.cull_mode == CullMode::Back) ? MTL::CullModeBack : (desc.rasterizer.cull_mode == CullMode::Front ? MTL::CullModeFront : MTL::CullModeNone);
+            MTL::CullMode cull = MTL::CullModeNone;
 
-        MTL::CullMode cull = (desc.rasterizer.cull_mode == CullMode::Back) ? MTL::CullModeBack : (desc.rasterizer.cull_mode == CullMode::Front ? MTL::CullModeFront : MTL::CullModeNone);
-        //MTL::CullMode cull = MTL::CullModeNone;
+            return std::make_shared<MetalPipelineState>(pso, dss, winding, cull, desc.debug_name);
 
-        return std::make_shared<MetalPipelineState>(pso, dss, winding, cull, desc.debug_name);
+        } else if (desc.pipeline_type == PipelineType::Mesh) {
+
+            auto mesh_function = static_cast<MTL::Function*>(desc.mesh_shader);
+            auto fragment_function = static_cast<MTL::Function*>(desc.fragment_shader);
+
+            auto* pso_desc = MTL::MeshRenderPipelineDescriptor::alloc()->init();
+            pso_desc->setMeshFunction(mesh_function);
+            pso_desc->setFragmentFunction(fragment_function);
+            pso_desc->colorAttachments()->object(0)->setPixelFormat(static_cast<MTL::PixelFormat>(desc.color_format));
+            pso_desc->setRasterSampleCount(desc.sample_count);
+            pso_desc->setDepthAttachmentPixelFormat(static_cast<MTL::PixelFormat>(desc.depth_format));
+
+            pso_desc->setMaxTotalThreadsPerMeshThreadgroup(32);
+            pso_desc->setMaxTotalThreadsPerObjectThreadgroup(0);
+            pso_desc->setMeshThreadgroupSizeIsMultipleOfThreadExecutionWidth(true);
+
+            NS::Error* error = nullptr;
+            MTL::RenderPipelineState* pso = metal_device_->newRenderPipelineState(pso_desc, MTL::PipelineOptionNone, nullptr, &error);
+
+
+            if (!pso) {
+                std::cerr << "Failed to create pipeline '"
+                            << desc.debug_name << "': "
+                            << (error ? error->localizedDescription()->utf8String()
+                                    : "Unknown Metal error")
+                            << '\n';
+
+                pso_desc->release();
+                return nullptr;
+            }
+
+            pso_desc->release();
+
+            MTL::DepthStencilState* dss = nullptr;
+            if (desc.depth_stencil.depth_test_enable) {
+                auto* depth_stencil_descriptor = MTL::DepthStencilDescriptor::alloc()->init();
+                depth_stencil_descriptor->setDepthCompareFunction(to_metal_compare_function(desc.depth_stencil.depth_compare_op));
+                depth_stencil_descriptor->setDepthWriteEnabled(desc.depth_stencil.depth_write_enable);
+                dss = metal_device_->newDepthStencilState(depth_stencil_descriptor);
+                depth_stencil_descriptor->release();
+            }
+
+            MTL::Winding winding = (desc.rasterizer.winding_order == WindingOrder::Clockwise) ? MTL::WindingClockwise : MTL::WindingCounterClockwise;
+
+            //MTL::CullMode cull = (desc.rasterizer.cull_mode == CullMode::Back) ? MTL::CullModeBack : (desc.rasterizer.cull_mode == CullMode::Front ? MTL::CullModeFront : MTL::CullModeNone);
+            MTL::CullMode cull = MTL::CullModeNone;
+
+            return std::make_shared<MetalPipelineState>(pso, dss, winding, cull, desc.debug_name);
+
+        };
+
     }
 }

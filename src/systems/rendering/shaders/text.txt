@@ -1,0 +1,52 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(triangles, max_vertices = 24, max_primitives = 12) out;
+
+
+struct VertexData
+{
+    vec4 position;
+    vec3 normal;
+    vec2 textureCoordinate;
+};
+
+layout(std430, binding = 0) readonly buffer VertexBuffer
+{
+    VertexData vertexData[];
+};
+
+
+layout(std430, binding = 1) readonly buffer IndexBuffer
+{
+    uint indexData[];
+};
+
+layout(std140, binding = 2) uniform TransformationData
+{
+    mat4 modelMatrix;
+    mat4 viewMatrix;
+    mat4 perspectiveMatrix;
+};
+
+void main() {
+    uint gID = gl_LocalInvocationID.x;
+
+    uint vertex_count = 24;
+    uint triangle_count = 12;
+    SetMeshOutputsEXT(vertex_count, triangle_count);
+
+    if (gID < vertex_count) {
+        mat4 mvp = perspectiveMatrix * viewMatrix * modelMatrix;
+        gl_MeshVerticesEXT[gID].gl_Position = vertexData[gID].position;
+    }
+
+    if (gID < triangle_count) {
+        uint index0 = indexData[gID * 3];
+        uint index1 = indexData[gID * 3 + 1];
+        uint index2 = indexData[gID * 3 + 2];
+        gl_PrimitiveTriangleIndicesEXT[gID] = uvec3(index0, index1, index2);
+    }
+
+}
