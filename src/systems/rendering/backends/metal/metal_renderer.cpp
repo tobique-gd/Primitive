@@ -388,6 +388,7 @@ namespace Primitive {
           std::string vert_sky_msl = compiler.compile_glsl_file_to_msl("src/systems/rendering/shaders/sky_3d.vert.glsl");
           std::string frag_sky_msl = compiler.compile_glsl_file_to_msl("src/systems/rendering/shaders/sky_3d.frag.glsl");
 
+          std::cout << mesh_msl << "\n";
 
           metal_backend->metal_vertex_library = metal_backend->raw_metal_device->newLibrary(
             NS::String::string(vert_msl.c_str(), NS::UTF8StringEncoding),

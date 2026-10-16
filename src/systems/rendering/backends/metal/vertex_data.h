@@ -14,7 +14,7 @@ struct VertexData {
 };
 
 struct TransformationData {
-    glm::mat4x4 model_matrix;
-    glm::mat4x4 view_matrix;
-    glm::mat4x4 perspective_matrix;
+    alignas(64) glm::mat4x4 model_matrix;
+    alignas(64) glm::mat4x4 view_matrix;
+    alignas(64) glm::mat4x4 perspective_matrix;
 };

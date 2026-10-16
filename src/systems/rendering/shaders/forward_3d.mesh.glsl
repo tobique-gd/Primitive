@@ -2,7 +2,7 @@
 #extension GL_EXT_mesh_shader : require
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
-layout(triangles, max_vertices = 3, max_primitives = 1) out;
+layout(triangles, max_vertices = 24, max_primitives = 12) out;
 
 
 struct VertexData
@@ -14,10 +14,15 @@ struct VertexData
 
 layout(std430, binding = 0) readonly buffer VertexBuffer
 {
-    VertexData vertexData[];
+    VertexData vertex_Data[];
 };
 
-layout(std140, binding = 1) uniform TransformationData
+layout(std430, binding = 1) readonly buffer IndexBuffer
+{
+    uint index_Data[];
+};
+
+layout(std140, binding = 2) uniform TransformationData
 {
     mat4 modelMatrix;
     mat4 viewMatrix;
@@ -27,15 +32,35 @@ layout(std140, binding = 1) uniform TransformationData
 layout(location = 1) out vec3 v_normal[];
 
 void main() {
-    vec4 dummy_pos = vertexData[0].position;
-    mat4 dummy_mat = perspectiveMatrix;
+    uint g_ID = gl_GlobalInvocationID.x;
 
-    uint vertex_count = 3;
-    uint triangle_count = 1;
+    uint vertex_count = 24;
+    uint triangle_count = 12;
+
     SetMeshOutputsEXT(vertex_count, triangle_count);
-    gl_MeshVerticesEXT[0].gl_Position = vec4(0.5,-0.5, 0, 1);
-    gl_MeshVerticesEXT[1].gl_Position = vec4(0.5, 0.5, 0, 1);
-    gl_MeshVerticesEXT[2].gl_Position = vec4(-0.5, 0.5, 0, 1);
-    v_normal[0] = vec3(1.0, 0.0, 0.0);
-    gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(2, 1, 0);
+
+    mat4 mvp = perspectiveMatrix * viewMatrix * modelMatrix;
+
+    if (g_ID < 24) {
+
+        gl_MeshVerticesEXT[g_ID].gl_Position = mvp * vertex_Data[g_ID].position;
+        v_normal[g_ID] = normalize(transpose(inverse(mat3(modelMatrix))) * vertex_Data[g_ID].normal);
+
+    }
+
+    if (g_ID < 12) {
+        uint index0 = index_Data[g_ID * 3 + 0];
+        uint index1 = index_Data[g_ID * 3 + 1];
+        uint index2 = index_Data[g_ID * 3 + 2];
+
+        gl_PrimitiveTriangleIndicesEXT[g_ID] = uvec3(index0, index1, index2);
+    }
+
+
+
+
+
+
+
+
 }

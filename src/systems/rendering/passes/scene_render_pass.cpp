@@ -25,9 +25,9 @@ namespace Primitive {
 
         command_list.set_pipeline_state(m_pipeline);
 
-        command_list.set_mesh_buffer(m_mesh_buffer, 0);
-        command_list.set_index_buffer(m_index_buffer);
-        command_list.set_mesh_buffer(m_transform_buffer, 2);
+        command_list.set_mesh_buffer(m_mesh_buffer, 1);
+        command_list.set_mesh_buffer(m_index_buffer, 2);
+        command_list.set_mesh_buffer(m_transform_buffer, 0);
 
         MTL::Size threadgroupsPerGrid = MTL::Size(1, 1, 1);
         MTL::Size threadsPerThreadgroup = MTL::Size(32, 1, 1);
