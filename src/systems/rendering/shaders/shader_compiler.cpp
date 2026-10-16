@@ -21,6 +21,8 @@ namespace Primitive {
             if (stage == "geom" || stage == "geometry") return EShLangGeometry;
             if (stage == "tesc" || stage == "tesscontrol") return EShLangTessControl;
             if (stage == "tese" || stage == "tessevaluation") return EShLangTessEvaluation;
+            if (stage == "mesh") return EShLangMesh;
+            if (stage == "task") return EShLangTask;
 
             throw std::runtime_error("Unknown shader stage: " + stage);
         }
@@ -64,16 +66,38 @@ std::vector<uint32_t> ShaderCompiler::compile_glsl_to_spirv(
 
         glslang::TShader shader(glslang_stage);
         const char* source = glsl_source.c_str();
-        shader.setStrings(&source, 1);
 
-        shader.setEnvInput(glslang::EShSourceGlsl, glslang_stage, glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-        shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
+        shader.setStrings(&source, 1);
+        shader.setEnvInput(
+            glslang::EShSourceGlsl,
+            glslang_stage,
+            glslang::EShClientVulkan,
+            450
+        );
+        shader.setEnvClient(
+            glslang::EShClientVulkan,
+            glslang::EShTargetVulkan_1_2
+        );
+        shader.setEnvTarget(
+            glslang::EShTargetSpv,
+            glslang::EShTargetSpv_1_5
+        );
 
         const TBuiltInResource* resources = GetDefaultResources();
-        if (!shader.parse(resources, 450, false, EShMsgDefault)) {
-            last_error_ = shader.getInfoLog();
-            throw std::runtime_error("GLSL compilation failed: " + last_error_);
+
+        if (!shader.parse(
+            resources,
+            450,
+            false,
+            static_cast<EShMessages>(
+                EShMsgDefault | EShMsgSpvRules | EShMsgVulkanRules
+            )
+        )) {
+            last_error_ =
+                std::string(shader.getInfoLog()) + "\n" +
+                shader.getInfoDebugLog();
+
+            throw std::runtime_error("GLSL compilation failed:\n" + last_error_);
         }
 
         glslang::TProgram program;

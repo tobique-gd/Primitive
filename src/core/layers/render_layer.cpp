@@ -2,6 +2,7 @@
 #include "core/events/ievent.h"
 #include "core/events/rendering_events.h"
 #include "systems/rendering/rendering_system.h"
+#include "systems/rendering/rhi/texture_2d.h"
 #include <iostream>
 #include <memory>
 
@@ -21,7 +22,7 @@ namespace Primitive {
     void RenderLayer::on_update()
     {
         m_renderer->draw();
-        auto texture = m_renderer->get_viewport_texture();
+        std::shared_ptr<Texture2D> texture = m_renderer->get_viewport_texture();
 
         m_event_dispatcher->dispatch_event(
             std::make_shared<NewFrameRenderedEvent>(texture)

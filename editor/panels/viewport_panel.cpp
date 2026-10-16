@@ -13,19 +13,18 @@
 namespace Primitive {
 
 
-    void ViewportPanel::set_texture(std::shared_ptr<RHI::ITexture2D> texture) {
+    void ViewportPanel::set_texture(std::shared_ptr<Texture2D> texture) {
         m_texture = texture;
     }
 
 
     void ViewportPanel::on_imgui_render() {
-
         ImGuiWindowFlags windowFlags =
             ImGuiWindowFlags_NoScrollbar |
             ImGuiWindowFlags_NoDecoration |
             ImGuiWindowFlags_NoTitleBar;
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport", nullptr, windowFlags);
         ImGui::PopStyleVar();
 
@@ -35,69 +34,91 @@ namespace Primitive {
         ImVec2 viewport_pos = ImGui::GetCursorScreenPos();
         ImVec2 avail = ImGui::GetContentRegionAvail();
 
-        if (m_event_dispatcher) {
-            m_event_dispatcher->dispatch_event(
-                std::make_shared<ViewportSizeChangedEvent>(
-                    avail.x, avail.y
-                )
-            );
+
+        if (avail.x != m_last_viewport_width ||avail.y != m_last_viewport_height) {
+            if (m_event_dispatcher) {
+                m_event_dispatcher->dispatch_event(
+                    std::make_shared<ViewportSizeChangedEvent>(avail.x, avail.y)
+                );
+                m_last_viewport_width = avail.x;
+                m_last_viewport_height = avail.y;
+            }
         }
 
         if (m_texture) {
-            ImGui::Image(
-                m_texture->get_native_handle(),
-                avail
-            );
+            ImGui::Image(m_texture->get_native_handle(), avail);
         }
-
-        ImGui::SetCursorScreenPos(
-            ImVec2(viewport_pos.x + 12.0f, viewport_pos.y + 12.0f)
-        );
-
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 6));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 10));
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.14f, 0.25f));
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.f, 0.f, 0.f, 0.f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.f, 0.f, 0.f, 0.f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.f, 0.f, 0.f, 0.f));
 
         float toolbar_width = 46.0f;
         float visible_x = viewport_pos.x + 12.0f;
         float hidden_x = viewport_pos.x - toolbar_width - 2.0f;
-
         float target_x = m_toolbar_visible ? visible_x : hidden_x;
 
         float speed = 12.0f;
         float t = 1.0f - std::exp(-speed * ImGui::GetIO().DeltaTime);
-
         m_toolbar_offset += (target_x - m_toolbar_offset) * t;
 
-        ImGui::SetCursorScreenPos(
-            ImVec2(m_toolbar_offset, viewport_pos.y + 12.0f)
-        );
+        ImGui::SetCursorScreenPos(ImVec2(m_toolbar_offset, viewport_pos.y + 12.0f));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6.0f, 6.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 6.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, Primitive::UIColors::background_tp);
+
+        ImGuiChildFlags child_flags =
+            ImGuiChildFlags_AutoResizeY |
+            ImGuiChildFlags_AutoResizeX |
+            ImGuiChildFlags_AlwaysUseWindowPadding;
 
         ImGui::BeginChild(
             "ViewportToolbar",
             ImVec2(0, 0),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AutoResizeX,
-            ImGuiWindowFlags_NoScrollbar
+            child_flags,
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove
         );
 
-        ImGui::Button(ICON_FA_ARROW_POINTER, ImVec2(34, 34));
-        ImGui::Button(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, ImVec2(34, 34));
-        ImGui::Button(ICON_FA_ARROW_ROTATE_RIGHT, ImVec2(34, 34));
-        ImGui::Button(ICON_FA_UP_RIGHT_FROM_SQUARE, ImVec2(34, 34));
+        const char* tools[] = {
+            ICON_FA_ARROW_POINTER,
+            ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT,
+            ICON_FA_ARROW_ROTATE_LEFT,
+            ICON_FA_UP_RIGHT_FROM_SQUARE
+        };
+
+        ImVec2 button_size(34.0f, 34.0f);
+
+        for (int i = 0; i < 4; i++) {
+            bool is_selected = (m_editor_state->temporary.selected_tool == i);
+
+            if (is_selected) {
+                ImGui::PushStyleColor(ImGuiCol_Button, Primitive::UIColors::content);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Primitive::UIColors::panel);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, Primitive::UIColors::selection);
+                ImGui::PushStyleColor(ImGuiCol_Text, Primitive::UIColors::accent);
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Button, Primitive::UIColors::transparent);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Primitive::UIColors::content);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, Primitive::UIColors::selection);
+                ImGui::PushStyleColor(ImGuiCol_Text, Primitive::UIColors::text);
+            }
+
+            if (ImGui::Button(tools[i], button_size)) {
+                m_editor_state->temporary.selected_tool = i;
+            }
+
+            ImGui::PopStyleColor(4);
+        }
 
         ImGui::EndChild();
 
-        ImGui::PopStyleColor(4);
+        ImGui::PopStyleColor();
         ImGui::PopStyleVar(4);
 
         ImGui::End();
+
+
     }
+
 
 
     void ViewportPanel::on_event(std::shared_ptr<IEvent> event) {

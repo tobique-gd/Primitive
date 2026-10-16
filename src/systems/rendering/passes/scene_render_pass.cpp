@@ -2,14 +2,15 @@
 #include "systems/rendering/rhi/render_context.h"
 
 #include "systems/rendering/rhi/command_list.h"
+#include <iostream>
 
 namespace Primitive {
 
     SceneRenderPass::SceneRenderPass(
-        std::shared_ptr<RHI::IBuffer> vertex_buffer,
-        std::shared_ptr<RHI::IBuffer> index_buffer,
-        std::shared_ptr<RHI::IBuffer> transform_buffer,
-        std::shared_ptr<RHI::IPipelineState> pipeline
+        std::shared_ptr<IBuffer> vertex_buffer,
+        std::shared_ptr<IBuffer> index_buffer,
+        std::shared_ptr<IBuffer> transform_buffer,
+        std::shared_ptr<IPipelineState> pipeline
     )
         : m_vertex_buffer(std::move(vertex_buffer))
         , m_index_buffer(std::move(index_buffer))
@@ -18,7 +19,7 @@ namespace Primitive {
     {
     }
 
-    void SceneRenderPass::execute(RHI::RenderContext& context)
+    void SceneRenderPass::execute(RenderContext& context)
     {
         auto& command_list = context.get_command_list();
 

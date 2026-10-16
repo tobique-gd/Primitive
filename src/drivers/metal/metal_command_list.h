@@ -7,20 +7,38 @@
 #include "systems/rendering/rhi/buffer.h"
 #include "systems/rendering/rhi/command_list.h"
 #include <cstdint>
+#include <iostream>
 #include <memory>
 
-namespace Primitive::RHI::Metal {
+namespace Primitive {
     class MetalCommandList : public ICommandList {
         public:
             explicit MetalCommandList(MTL::RenderCommandEncoder* encoder) : encoder_(encoder) {}
 
             void set_pipeline_state(std::shared_ptr<IPipelineState> state) override {
+                if (!encoder_) {
+                    std::cerr << "MetalCommandList: encoder is null\n";
+                    return;
+                }
+
+                if (!state) {
+                    std::cerr << "MetalCommandList: pipeline state is null\n";
+                    return;
+                }
+
                 auto metal_pso = std::static_pointer_cast<MetalPipelineState>(state);
+
+                if (!metal_pso->get_pso()) {
+                    std::cerr << "MetalCommandList: native pipeline is null\n";
+                    return;
+                }
+
                 encoder_->setRenderPipelineState(metal_pso->get_pso());
+
                 if (metal_pso->get_depth_stencil()) {
                     encoder_->setDepthStencilState(metal_pso->get_depth_stencil());
                 }
-                encoder_->setTriangleFillMode(MTL::TriangleFillModeLines);
+
                 encoder_->setFrontFacingWinding(metal_pso->get_winding());
                 encoder_->setCullMode(metal_pso->get_cull_mode());
             }

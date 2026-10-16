@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-namespace Primitive::RHI {
+namespace Primitive {
 
     enum class BufferUsage {
         Vertex,

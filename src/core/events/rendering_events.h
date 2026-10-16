@@ -7,9 +7,9 @@
 
 namespace Primitive {
     struct NewFrameRenderedEvent : public IEvent {
-        std::shared_ptr<RHI::ITexture2D> frame;
+        std::shared_ptr<Texture2D> frame;
 
-        NewFrameRenderedEvent(std::shared_ptr<RHI::ITexture2D> frame) : frame(std::move(frame)) {}
+        NewFrameRenderedEvent(std::shared_ptr<Texture2D> frame) : frame(std::move(frame)) {}
 
         inline EventType get_type() const override { return EventType::NEW_FRAME_RENDERED; }
     };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/guid.h"
-#include "core/project/scene/scene.h"
+#include "scene/scene.h"
 
 #include <memory>
 #include <string>

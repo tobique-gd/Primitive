@@ -1,11 +1,16 @@
 #pragma once
 
 
-namespace Primitive::RHI
+namespace Primitive
 {
-    class ITexture2D {
+    enum class TextureFormat {
+        RGBA8,
+
+    };
+
+    class Texture2D {
         public:
-            virtual ~ITexture2D() = default;
+            virtual ~Texture2D() = default;
 
             int get_width() const {
                 return width;

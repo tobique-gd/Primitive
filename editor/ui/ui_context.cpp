@@ -71,6 +71,7 @@ namespace Primitive {
 
     void UIContext::begin_frame(void* target_pass_descriptor)
     {
+
         m_renderer->new_frame(target_pass_descriptor);
         m_platform->new_frame();
         ImGui::NewFrame();

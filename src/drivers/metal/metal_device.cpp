@@ -8,8 +8,9 @@
 #include "drivers/metal/metal_pipeline_state.h"
 #include "systems/rendering/rhi/pipeline_state.h"
 
+#include <iostream>
 #include <memory>
-namespace Primitive::RHI::Metal {
+namespace Primitive {
 
     std::shared_ptr<IBuffer> MetalDevice::create_buffer(const BufferDesc& desc) {
         return std::make_shared<MetalBuffer>(metal_device_, desc);
@@ -67,7 +68,21 @@ namespace Primitive::RHI::Metal {
         pso_desc->setDepthAttachmentPixelFormat(static_cast<MTL::PixelFormat>(desc.depth_format));
 
         NS::Error* error = nullptr;
-        MTL::RenderPipelineState* pso = metal_device_->newRenderPipelineState(pso_desc, &error);
+        MTL::RenderPipelineState* pso =
+            metal_device_->newRenderPipelineState(pso_desc, &error);
+
+
+        if (!pso) {
+            std::cerr << "Failed to create pipeline '"
+                      << desc.debug_name << "': "
+                      << (error ? error->localizedDescription()->utf8String()
+                                : "Unknown Metal error")
+                      << '\n';
+
+            pso_desc->release();
+            return nullptr;
+        }
+
         pso_desc->release();
 
         MTL::DepthStencilState* dss = nullptr;
@@ -82,6 +97,7 @@ namespace Primitive::RHI::Metal {
         MTL::Winding winding = (desc.rasterizer.winding_order == WindingOrder::Clockwise) ? MTL::WindingClockwise : MTL::WindingCounterClockwise;
 
         MTL::CullMode cull = (desc.rasterizer.cull_mode == CullMode::Back) ? MTL::CullModeBack : (desc.rasterizer.cull_mode == CullMode::Front ? MTL::CullModeFront : MTL::CullModeNone);
+        //MTL::CullMode cull = MTL::CullModeNone;
 
         return std::make_shared<MetalPipelineState>(pso, dss, winding, cull, desc.debug_name);
     }

@@ -1,7 +1,7 @@
 
 #include "editor/panels/hierarchy_panel.h"
-#include "core/project/scene/components.h"
-#include "core/project/scene/entity.h"
+#include "scene/components.h"
+#include "scene/entity.h"
 #include "editor/editor_state.h"
 #include "editor/ui/IconsFontAwesome6.h"
 #include "imgui.h"
@@ -18,9 +18,11 @@ namespace Primitive {
             return;
         }
 
-        if (ImGui::Button("Add Empty Entity")) {
-
-            scene->create_entity();
+        if (ImGui::BeginMenu("Add")) {
+            if (ImGui::MenuItem("Empty")) {
+                scene->create_entity();
+            }
+            ImGui::EndMenu();
         }
 
         entt::registry* active_registry = scene->get_registry();

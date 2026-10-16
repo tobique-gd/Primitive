@@ -4,7 +4,7 @@
 #include "Metal/MTLTexture.hpp"
 #include "drivers/metal/metal_texture_2d.h"
 
-namespace Primitive::RHI::Metal {
+namespace Primitive {
     MetalFramebuffer::MetalFramebuffer(MTL::Device* device, const FramebufferDesc& desc) : device_(device), desc_(desc) {
         invalidate();
     }

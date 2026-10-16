@@ -2,22 +2,22 @@
 
 #include "systems/rendering/rhi/command_list.h"
 
-namespace Primitive::RHI {
+namespace Primitive {
 
     class RenderContext {
     public:
-        explicit RenderContext(RHI::ICommandList& command_list)
+        explicit RenderContext(ICommandList& command_list)
             : m_command_list(command_list)
         {
         }
 
-        RHI::ICommandList& get_command_list()
+        ICommandList& get_command_list()
         {
             return m_command_list;
         }
 
     private:
-        RHI::ICommandList& m_command_list;
+        ICommandList& m_command_list;
     };
 
 }

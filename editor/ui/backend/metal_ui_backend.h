@@ -4,7 +4,7 @@
 
 namespace MTL { class Device; }
 
-namespace Primitive::RHI::Metal
+namespace Primitive
 {
     class MetalUIBackend final : public Primitive::IUIRendererBackend
     {

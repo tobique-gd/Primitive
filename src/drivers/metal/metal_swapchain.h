@@ -6,7 +6,7 @@
 namespace MTL { class Device; class RenderPassDescriptor; }
 namespace CA  { class MetalLayer; class MetalDrawable; }
 
-namespace Primitive::RHI::Metal
+namespace Primitive
 {
     class MetalSwapchain final : public ISwapchain
     {

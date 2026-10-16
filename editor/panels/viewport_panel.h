@@ -12,7 +12,7 @@ namespace Primitive {
             ~ViewportPanel() = default;
             void on_imgui_render() override;
 
-            void set_texture(std::shared_ptr<RHI::ITexture2D> texture);
+            void set_texture(std::shared_ptr<Texture2D> texture);
             void on_event(std::shared_ptr<IEvent> event) override ;
 
             bool m_toolbar_visible = true;
@@ -20,7 +20,9 @@ namespace Primitive {
 
 
         private:
-            std::shared_ptr<RHI::ITexture2D> m_texture;
+            std::shared_ptr<Texture2D> m_texture;
             std::shared_ptr<EditorState> m_editor_state;
+            int m_last_viewport_width;
+            int m_last_viewport_height;
     };
 }

@@ -1,10 +1,13 @@
-#include "drivers/metal/metal_ui_backend.h"
+#include "editor/ui/backend/metal_ui_backend.h"
 
 #include <Metal/Metal.hpp>
+#include "Metal/MTLCommandBuffer.hpp"
+#include "Metal/MTLRenderCommandEncoder.hpp"
+#include "Metal/MTLRenderPass.hpp"
 #include "imgui.h"
 #include "imgui_impl_metal.h"
 
-namespace Primitive::RHI::Metal
+namespace Primitive
 {
     void MetalUIBackend::init()
     {

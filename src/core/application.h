@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/events/window_events.h"
+#include "editor/ui/ui_context.h"
 #include "systems/display/iwindow.h"
 #include "editor/layers/editor_layer.h"
 #include "core/layers/layer_stack.h"
@@ -30,8 +31,8 @@ namespace Primitive {
         {
             _layer_stack.reset();
             _window.reset();
+            //_ui_context.reset();
 
-            //Platform::shutdown();
         }
 
         void on_event(IEvent& e)
@@ -47,8 +48,17 @@ namespace Primitive {
         void run()
         {
             while (!_window->should_close()) {
+                _renderer->begin_frame();
+                //_ui_context->begin_frame(nullptr);
+
                 _window->on_update();
                 _layer_stack->on_update();
+
+                //_ui_context->end_frame();
+
+                //_renderer->render_to_swapchain(_ui_context->draw_data());
+
+                _renderer->end_frame();
             }
         }
 

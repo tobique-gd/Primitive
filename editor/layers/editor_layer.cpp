@@ -5,6 +5,8 @@
 #include "editor/panels/hierarchy_panel.h"
 #include "editor/panels/viewport_panel.h"
 #include "editor/panels/console_panel.h"
+#include "editor/ui/backend/glfw_ui_backend.h"
+#include "editor/ui/backend/metal_ui_backend.h"
 #include "editor/ui/ui_theme.h"
 #include "imgui_internal.h"
 #include "imgui.h"
@@ -42,19 +44,51 @@ namespace Primitive {
     void EditorLayer::on_attach() {
         GUID s_guid = m_project_manager->get_scene_manager()->create_scene();
         m_project_manager->get_scene_manager()->set_open_scene_guid(s_guid);
+
+        m_ui_context = std::make_unique<UIContext>(
+            std::make_unique<GLFWUIBackend>(),
+            std::make_unique<MetalUIBackend>(
+                static_cast<MTL::Device*>(m_renderer->get_native_device())
+            )
+        );
+
+        m_ui_context->init(*m_window);
     }
 
-    void EditorLayer::on_detach() {}
+    void EditorLayer::on_detach()
+    {
+        if (m_ui_context) {
+            m_ui_context->shutdown();
+            m_ui_context.reset();
+        }
+    }
 
     void EditorLayer::on_update() {
-        m_renderer->begin_frame();
+
+        void* pass_descriptor =
+                m_renderer->get_overlay_render_pass_descriptor();
+
+            if (!pass_descriptor)
+                return;
+
+        m_ui_context->begin_frame(pass_descriptor);
+
         create_ui_layer();
+
 
         for (auto& panel : m_editor_panels) {
             panel->on_imgui_render();
         }
 
-        m_renderer->end_frame();
+        m_ui_context->end_frame();
+
+        m_renderer->set_overlay_callback(
+            [this](void* command_buffer, void* encoder) {
+                m_ui_context->render(command_buffer, encoder);
+            }
+        );
+
+
     }
 
 
@@ -124,14 +158,14 @@ namespace Primitive {
 
             if (begin_top_menu("Scene")) {
                 ImGui::PushStyleColor(ImGuiCol_Text, UIColors::text);
-                if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN " New Scene")) {
+                if (ImGui::MenuItem("New Scene")) {
                 }
-                if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN "  Open Scene")) {
+                if (ImGui::MenuItem("Open Scene")) {
                 }
                 ImGui::PopStyleColor();
                 ImGui::EndMenu();
             }
-            if (begin_top_menu("Edit"))   { ImGui::EndMenu(); }
+            if (begin_top_menu("Project"))   { ImGui::EndMenu(); }
             if (begin_top_menu("View"))   { ImGui::EndMenu(); }
             if (begin_top_menu("Window")) { ImGui::EndMenu(); }
 

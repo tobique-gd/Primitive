@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/guid.h"
-#include "core/project/scene/entity.h"
+#include "scene/entity.h"
 #include "thirdparty/entt/entt.hpp"
 
 namespace Primitive {

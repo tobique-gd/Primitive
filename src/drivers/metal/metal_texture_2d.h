@@ -6,8 +6,8 @@
 #include <Foundation/NSSharedPtr.hpp>
 #include <Metal/Metal.hpp>
 
-namespace Primitive::RHI::Metal {
-    class MetalTexture2D : public ITexture2D{
+namespace Primitive {
+    class MetalTexture2D : public Texture2D{
         public:
             MetalTexture2D(NS::SharedPtr<MTL::Texture> texture)
                 : texture(texture)

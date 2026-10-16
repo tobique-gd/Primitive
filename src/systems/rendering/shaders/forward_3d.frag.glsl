@@ -13,7 +13,7 @@ void main()
 
     float diff =  lambert_term;
 
-    vec3 diffuse = diff_half * vec3(0.1, 0.8, 0.6);
+    vec3 diffuse = diff_half * vec3(0.733, 0.733, 0.733);
 
     fragmentColor = vec4(diffuse, 1.0);
 }

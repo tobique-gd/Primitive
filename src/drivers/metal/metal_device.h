@@ -8,14 +8,14 @@
 
 
 #include <memory>
-namespace Primitive::RHI::Metal {
+namespace Primitive {
     class MetalDevice : public IDevice {
         public:
             MetalDevice(MTL::Device* device) {
                 metal_device_ = device;
             };
 
-            std::shared_ptr<RHI::IBuffer> create_buffer(const BufferDesc& desc) override;
+            std::shared_ptr<IBuffer> create_buffer(const BufferDesc& desc) override;
             std::shared_ptr<IPipelineState> create_pipeline_state(const PipelineDesc& desc) override;
             std::shared_ptr<IFramebuffer> create_framebuffer(const FramebufferDesc& desc) override;
 

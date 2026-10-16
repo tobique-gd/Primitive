@@ -4,8 +4,11 @@
 #include <memory>
 
 
+#include "drivers/metal/metal_device.h"
+#include "imgui.h"
 #include "systems/display/iwindow.h"
 #include "systems/rendering/rendering_system.h"
+#include "systems/rendering/rhi/device.h"
 #include "systems/rendering/rhi/texture_2d.h"
 
 namespace MTL {
@@ -31,12 +34,26 @@ namespace Primitive {
 
         void draw() override;
 
-        std::shared_ptr<RHI::ITexture2D> get_viewport_texture() override;
+        std::shared_ptr<Texture2D> get_viewport_texture() override;
         void set_viewport_size(int width, int height) override;
         void on_window_resize(int width, int height) override;
+        //void render_to_swapchain() override;
+        //
+        void* get_overlay_render_pass_descriptor() const override;
+
+        void render_overlay(
+            const std::function<void(void*, void*)>& callback
+        ) override;
+
+        void set_overlay_callback(
+            std::function<void(void*, void*)> callback
+        ) override;
+
+        void* get_native_device() const override;
+
+
 
     private:
-        void init_window(IWindow& window);
         void init_device();
 
         void create_cube();
@@ -48,13 +65,8 @@ namespace Primitive {
 
         void create_buffers();
 
-
-        void create_depth_and_MSAA_textures();
-        void create_render_pass_descriptor();
-        void create_internal_render_target();
-
-        void update_render_pass_descriptor();
         void update_scene_transforms();
+        void update_sky_transforms();
 
 
         struct Impl;

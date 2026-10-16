@@ -4,7 +4,7 @@
 #include <memory>
 #include <glm/vec4.hpp>
 
-namespace Primitive::RHI {
+namespace Primitive {
 
     enum class FramebufferType {
         Offscreen,
@@ -33,7 +33,7 @@ namespace Primitive::RHI {
             virtual ~IFramebuffer() = default;
 
             virtual void resize(uint32_t width, uint32_t height) = 0;
-            virtual std::shared_ptr<ITexture2D> get_color_attachment() const = 0;
+            virtual std::shared_ptr<Texture2D> get_color_attachment() const = 0;
             virtual void* get_native_render_pass_descriptor() const = 0;
     };
 

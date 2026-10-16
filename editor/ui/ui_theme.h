@@ -7,6 +7,7 @@ namespace Primitive {
     struct UIColors {
 
         static inline const ImVec4 background        = ImVec4(0.03f, 0.03f, 0.04f, 1.00f);
+        static inline const ImVec4 background_tp     = ImVec4(0.03f, 0.03f, 0.04f, 0.3f);
         static inline const ImVec4 panel             = ImVec4(0.09f, 0.09f, 0.10f, 1.00f);
         static inline const ImVec4 content           = ImVec4(0.12f, 0.12f, 0.13f, 1.00f);
         static inline const ImVec4 input             = ImVec4(0.06f, 0.06f, 0.07f, 1.00f);
@@ -19,9 +20,9 @@ namespace Primitive {
         static inline const ImVec4 text              = ImVec4(0.98f, 0.98f, 0.98f, 1.00f);
         static inline const ImVec4 text_disabled     = ImVec4(0.45f, 0.45f, 0.47f, 1.00f);
 
-        static inline const ImVec4 accent            = ImVec4(0.98f, 0.98f, 0.98f, 1.00f);
-        static inline const ImVec4 accent_hover      = ImVec4(0.80f, 0.80f, 0.80f, 1.00f);
-        static inline const ImVec4 accent_active     = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+        static inline const ImVec4 accent            = ImVec4(1.0, 200.0 / 255.0, 87.0 / 255.0, 1.0);
+        static inline const ImVec4 accent_hover      = ImVec4(0.95, (200.0 / 255.0) - 0.05, (87.0 / 255.0) - 0.05, 1.0);
+        static inline const ImVec4 accent_active     = ImVec4(0.90, (200.0 / 255.0) - 0.1, (87.0 / 255.0) - 0.1, 1.0);
         static inline const ImVec4 selection         = ImVec4(1.00f, 1.00f, 1.00f, 0.15f);
 
         static inline const ImVec4 transparent       = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -115,6 +116,9 @@ namespace Primitive {
             colors[ImGuiCol_TabActive] = UIColors::content;
             colors[ImGuiCol_TabUnfocused] = UIColors::panel_header;
             colors[ImGuiCol_TabUnfocusedActive] = UIColors::panel;
+
+            colors[ImGuiCol_TabSelectedOverline] = UIColors::accent;
+            colors[ImGuiCol_TabDimmedSelectedOverline] = UIColors::panel_header;
 
             colors[ImGuiCol_TableHeaderBg] = UIColors::panel_header;
             colors[ImGuiCol_TableBorderStrong] = UIColors::border;

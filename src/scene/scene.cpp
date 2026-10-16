@@ -1,6 +1,6 @@
 #include "scene.h"
-#include "core/project/scene/components.h"
-#include "core/project/scene/entity.h"
+#include "scene/components.h"
+#include "scene/entity.h"
 #include <string>
 
 namespace Primitive {

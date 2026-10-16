@@ -5,6 +5,7 @@
 #include "core/project/project_manager.h"
 #include "editor/editor_state.h"
 #include "editor/panels/ieditorpanel.h"
+#include "editor/ui/ui_context.h"
 #include "systems/display/iwindow.h"
 #include "editor/panels/viewport_panel.h"
 #include "systems/rendering/rendering_system.h"
@@ -29,10 +30,13 @@ namespace Primitive {
             std::shared_ptr<IWindow> m_window;
             std::shared_ptr<ProjectManager> m_project_manager;
 
+            std::unique_ptr<UIContext> _ui;
             std::shared_ptr<RenderingSystem> m_renderer;
-            std::shared_ptr<EditorState> m_editor_state;
 
+            std::shared_ptr<EditorState> m_editor_state;
             std::array<std::unique_ptr<IEditorPanel>, 4> m_editor_panels;
+
+            std::unique_ptr<UIContext> m_ui_context;
 
 
 

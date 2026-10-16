@@ -7,7 +7,7 @@
 #include <CoreGraphics/CoreGraphics.h>
 #include <stdexcept>
 
-namespace Primitive::RHI::Metal
+namespace Primitive
 {
     static MTL::LoadAction to_mtl(LoadOp op)
     {
@@ -19,8 +19,7 @@ namespace Primitive::RHI::Metal
         return MTL::LoadActionClear;
     }
 
-    MetalSwapchain::MetalSwapchain(MTL::Device* device, const SwapchainDesc& desc)
-        : m_width(desc.width), m_height(desc.height)
+    MetalSwapchain::MetalSwapchain(MTL::Device* device, const SwapchainDesc& desc) : m_width(desc.width), m_height(desc.height)
     {
         if (!device) throw std::runtime_error("MetalSwapchain: null device");
         if (!desc.native_window) throw std::runtime_error("MetalSwapchain: null native window");

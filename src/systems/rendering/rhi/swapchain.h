@@ -1,7 +1,7 @@
 // src/systems/rendering/rhi/swapchain.h
 #pragma once
 
-namespace Primitive::RHI
+namespace Primitive
 {
     enum class LoadOp { Load, Clear, DontCare };
 

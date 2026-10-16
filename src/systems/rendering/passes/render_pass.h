@@ -10,7 +10,7 @@ namespace Primitive {
         public:
             virtual ~IRenderPass() = default;
 
-            virtual void execute(RHI::RenderContext& context) = 0;
+            virtual void execute(RenderContext& context) = 0;
             virtual void resize(uint32_t width, uint32_t height) {}
         };
 

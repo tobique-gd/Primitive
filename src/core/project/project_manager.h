@@ -2,7 +2,7 @@
 
 #include "core/project/assets/asset_manager.h"
 #include "core/project/project_file.h"
-#include "core/project/scene/scene_manager.h"
+#include "scene/scene_manager.h"
 #include <filesystem>
 #include <memory>
 #include <string>

@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <cstring>
 
-namespace Primitive::RHI::Metal {
+namespace Primitive {
 
     class MetalBuffer : public IBuffer{
         public:
