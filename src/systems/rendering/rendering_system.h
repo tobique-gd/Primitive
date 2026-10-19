@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/project/project_manager.h"
 #include "systems/display/iwindow.h"
 #include "systems/rendering/rhi/device.h"
 #include "systems/rendering/rhi/texture_2d.h"
@@ -12,7 +13,7 @@ namespace Primitive {
     public:
         virtual ~RenderingSystem() = default;
 
-        virtual void init(IWindow& window) = 0;
+        virtual void init(IWindow& window, std::shared_ptr<ProjectManager> project_manager) = 0;
         virtual void shutdown() = 0;
 
         virtual void begin_frame() = 0;

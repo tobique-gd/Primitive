@@ -1,7 +1,5 @@
 
 #include "editor/panels/inspector_panel.h"
-#include "scene/components.h"
-#include "scene/entity.h"
 #include "editor/ui/IconsFontAwesome6.h"
 #include "imgui.h"
 
@@ -10,13 +8,13 @@ namespace Primitive {
 
         ImGui::Begin("Inspector");
 
-        if (m_editor_state->temporary.selected_entity == entt::null) {
+        if (m_editor_state->temporary.selected_node == nullptr) {
             ImGui::End();
             return;
         }
 
         auto scene = m_project_manager->get_scene_manager()->get_open_scene();
-
+/*
         entt::registry* active_registry = scene->get_registry();
         entt::entity selected_entity = m_editor_state->temporary.selected_entity;
         EntityHandle entity(selected_entity, active_registry);
@@ -45,6 +43,7 @@ namespace Primitive {
 			ImGui::Text(guid.string().c_str());
 		}
 		//
+		// */
 
         ImGui::End();
 

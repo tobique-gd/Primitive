@@ -1,19 +1,30 @@
-#include "scene.h"
-#include "scene/components.h"
-#include "scene/entity.h"
-#include <string>
+#include "scene/scene.h"
+
+#include <utility>
 
 namespace Primitive {
-    EntityHandle Scene::create_entity(const std::string& name) {
-        entt::entity entity_id = m_registry->create();
-        EntityHandle entity(entity_id, m_registry);
-        entity.get_or_add_component<IDComponent>();
-        entity.get_or_add_component<TagComponent>(name);
-        return entity;
+    Scene::Scene(const std::string& name)
+        : name(name),
+          m_root(std::make_unique<Node>("Root")) {}
 
-    };
+    Node* Scene::create_node(const std::string& name) {
+        auto node = std::make_unique<Node>(name);
+        return m_root->add_child(std::move(node));
+    }
 
-    void Scene::destroy_entity(EntityHandle entity) {
-        m_registry->destroy(entity.get_entt_id());
+    bool Scene::destroy_node(Node* node) {
+        if (!node || node == m_root.get())
+            return false;
+
+        Node* parent = node->get_parent();
+
+        if (!parent)
+            return false;
+
+        return parent->remove_child(node);
+    }
+
+    Node* Scene::get_root() const {
+        return m_root.get();
     }
 }

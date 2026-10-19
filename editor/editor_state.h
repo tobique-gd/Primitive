@@ -1,10 +1,10 @@
 #pragma once
 
-#include "scene/entity.h"
+#include "scene/main/node.h"
 namespace Primitive {
     struct EditorState {
         struct {
-            entt::entity selected_entity = entt::null;
+            Node* selected_node = nullptr;
             int selected_tool = 0;
         } temporary;
     };

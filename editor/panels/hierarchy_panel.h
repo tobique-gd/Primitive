@@ -19,5 +19,7 @@ namespace Primitive
         private:
             std::shared_ptr<ProjectManager> m_project_manager;
             std::shared_ptr<EditorState> m_editor_state;
+
+            void render_node(Node* node);
     };
 }

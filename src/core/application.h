@@ -24,14 +24,15 @@ namespace Primitive {
             _project_manager = std::make_shared<ProjectManager>();
             _layer_stack = std::make_shared<LayerStack>();
             _renderer = std::make_shared<MetalRenderer>();
-            _renderer->init(*_window);
+            _renderer->init(*_window, _project_manager);
         }
 
         virtual ~Application()
         {
             _layer_stack.reset();
             _window.reset();
-            //_ui_context.reset();
+            _renderer.reset();
+            _display_system.reset();
 
         }
 
@@ -49,14 +50,9 @@ namespace Primitive {
         {
             while (!_window->should_close()) {
                 _renderer->begin_frame();
-                //_ui_context->begin_frame(nullptr);
 
                 _window->on_update();
                 _layer_stack->on_update();
-
-                //_ui_context->end_frame();
-
-                //_renderer->render_to_swapchain(_ui_context->draw_data());
 
                 _renderer->end_frame();
             }

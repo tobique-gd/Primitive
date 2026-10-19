@@ -19,15 +19,21 @@ env.Append(CPPPATH=[
     'thirdparty/glslang',
     'thirdparty/glslang/glslang',
     'thirdparty/glslang/SPIRV',
-    'thirdparty/spirv-cross'
+    'thirdparty/spirv-cross',
+    'thirdparty/assimp/include',
+    'thirdparty/assimp/build/include',
+    'thirdparty/meshoptimizer/src'
 ])
 
 env.Append(
     LIBPATH=[
-        'thirdparty/glfw/build/src'
+        'thirdparty/glfw/build/src',
+        'thirdparty/assimp/build/lib'
     ],
     LIBS=[
-        'glfw3'
+        'glfw3',
+        'assimp',
+        'z'
     ]
 )
 
@@ -43,6 +49,7 @@ source_files = [
 
     'src/scene/scene_manager.cpp',
     'src/scene/scene.cpp',
+    'src/scene/main/node.cpp',
 
     'editor/panels/viewport_panel.cpp',
     'editor/panels/console_panel.cpp',
@@ -53,6 +60,7 @@ source_files = [
     'editor/ui/ui_context.cpp',
     'editor/ui/backend/metal_ui_backend.cpp',
     'editor/ui/backend/glfw_ui_backend.cpp',
+    'editor/import/resource_importer_scene.cpp',
 
     'src/platform/macos/GLFWWindow.cpp',
 
@@ -128,7 +136,29 @@ source_files = [
     'thirdparty/spirv-cross/spirv_cross_util.cpp',
     'thirdparty/spirv-cross/spirv_glsl.cpp',
     'thirdparty/spirv-cross/spirv_msl.cpp',
-    'thirdparty/spirv-cross/spirv_parser.cpp'
+    'thirdparty/spirv-cross/spirv_parser.cpp',
+
+    'thirdparty/meshoptimizer/src/allocator.cpp',
+    'thirdparty/meshoptimizer/src/clusterizer.cpp',
+    'thirdparty/meshoptimizer/src/indexanalyzer.cpp',
+    'thirdparty/meshoptimizer/src/indexcodec.cpp',
+    'thirdparty/meshoptimizer/src/indexgenerator.cpp',
+    'thirdparty/meshoptimizer/src/meshletcodec.cpp',
+    'thirdparty/meshoptimizer/src/meshletutils.cpp',
+    'thirdparty/meshoptimizer/src/opacitymap.cpp',
+    'thirdparty/meshoptimizer/src/overdrawoptimizer.cpp',
+    'thirdparty/meshoptimizer/src/partition.cpp',
+    'thirdparty/meshoptimizer/src/quantization.cpp',
+    'thirdparty/meshoptimizer/src/rasterizer.cpp',
+    'thirdparty/meshoptimizer/src/remesher.cpp',
+    'thirdparty/meshoptimizer/src/simplifier.cpp',
+    'thirdparty/meshoptimizer/src/spatialorder.cpp',
+    'thirdparty/meshoptimizer/src/stripifier.cpp',
+    'thirdparty/meshoptimizer/src/tangentspace.cpp',
+    'thirdparty/meshoptimizer/src/vcacheoptimizer.cpp',
+    'thirdparty/meshoptimizer/src/vertexcodec.cpp',
+    'thirdparty/meshoptimizer/src/vertexfilter.cpp',
+    'thirdparty/meshoptimizer/src/vfetchoptimizer.cpp',
 ]
 
 build_info = env.Command(
@@ -152,7 +182,7 @@ if env['PLATFORM'] == 'darwin':
             'IMGUI_IMPL_METAL_CPP'
         ],
         CPPPATH=[
-            'thirdparty/metal-cpp'
+            'thirdparty/metal-cpp',
         ],
         FRAMEWORKS=[
             'Cocoa',

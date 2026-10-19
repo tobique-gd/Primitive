@@ -1,25 +1,25 @@
 #pragma once
 
 #include "core/guid.h"
-#include "scene/entity.h"
-#include "thirdparty/entt/entt.hpp"
+#include "scene/main/node.h"
+
+#include <memory>
+#include <string>
 
 namespace Primitive {
     class Scene {
-        public:
-            explicit Scene() { m_registry = new entt::registry(); }
-            ~Scene() { delete m_registry; }
+    public:
+        explicit Scene(const std::string& name = "Scene");
 
-            EntityHandle create_entity(const std::string& name = "Empty Entity");
-            void destroy_entity(EntityHandle entity);
+        Node* create_node(const std::string& name = "Node");
+        bool destroy_node(Node* node);
 
-            GUID guid;
-            std::string name;
+        Node* get_root() const;
 
-            inline entt::registry* get_registry() const { return m_registry; }
+        GUID guid;
+        std::string name;
 
-
-        private:
-            entt::registry* m_registry;
+    private:
+        std::unique_ptr<Node> m_root;
     };
 }

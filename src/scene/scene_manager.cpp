@@ -4,11 +4,12 @@
 
 namespace Primitive {
     GUID SceneManager::create_scene(const std::string& name) {
-        std::shared_ptr<Scene> new_scene = std::make_shared<Scene>();
-        new_scene->name = name;
+        std::shared_ptr<Scene> new_scene = std::make_shared<Scene>(name);
+
         m_scenes[new_scene->guid] = new_scene;
         return new_scene->guid;
     }
+
 
     void SceneManager::delete_scene(GUID guid) {
         if (m_open_scene_guid == guid) {

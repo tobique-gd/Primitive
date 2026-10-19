@@ -16,6 +16,7 @@
 #include "Metal/MTLRenderPipeline.hpp"
 #include "Metal/MTLResource.hpp"
 
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -25,11 +26,14 @@
 #include "drivers/metal/metal_device.h"
 #include "drivers/metal/metal_command_list.h"
 
+#include "editor/import/resource_importer_scene.h"
+#include "meshoptimizer.h"
 #include "systems/display/iwindow.h"
 #include "systems/rendering/frame_graph/render_graph.h"
 #include "systems/rendering/passes/scene_render_pass.h"
 #include "systems/rendering/passes/sky_pass.h"
 #include "systems/rendering/rhi/framebuffer.h"
+#include "scene/3d/geometry_instance.h"
 
 /* #include "editor/ui/ui_context.h" */
 
@@ -48,6 +52,7 @@
 #include <iostream>
 #include <memory>
 #include <simd/simd.h>
+#include <vector>
 
 namespace Primitive {
     struct MetalRenderer::Impl {
@@ -59,6 +64,14 @@ namespace Primitive {
 
         std::shared_ptr<IBuffer> vertex_buffer;
         std::shared_ptr<IBuffer> index_buffer;
+        std::shared_ptr<IBuffer>  meshlet_buffer;
+        std::shared_ptr<IBuffer>  meshlet_vertices;
+        std::shared_ptr<IBuffer>  meshlet_indices;
+        uint32_t meshlet_count;
+
+        std::shared_ptr<IBuffer> cube_vertex_buffer;
+        std::shared_ptr<IBuffer> cube_index_buffer;
+
         std::shared_ptr<IBuffer> transform_buffer;
         std::shared_ptr<IBuffer> sky_transform_buffer;
         std::shared_ptr<IPipelineState> pipeline_state;
@@ -159,7 +172,7 @@ namespace Primitive {
     }
 
 
-    void MetalRenderer::init(IWindow& window)
+    void MetalRenderer::init(IWindow& window, std::shared_ptr<ProjectManager> project_manager)
     {
         init_device();
 
@@ -176,11 +189,107 @@ namespace Primitive {
         metal_backend->swapchain = std::make_unique<MetalSwapchain>( metal_backend->raw_metal_device, desc);
 
         create_buffers();
-/*
-        metal_backend->ui = std::make_unique<UIContext>(std::make_unique<GLFWUIBackend>(), std::make_unique<RHIUIBackend>(metal_backend->raw_metal_device));
-        metal_backend->ui->init(window); */
+
+        EditorSceneFormatImporter imp = EditorSceneFormatImporter(project_manager);
+        std::filesystem::path p = std::filesystem::path("editor/import/xyzrgb_dragon.obj");
+        GUID s = imp.import_scene(p);
+
+        project_manager->get_scene_manager()->set_open_scene_guid(s);
+
+        auto scene = project_manager->get_scene_manager()->get_open_scene();
+        if (scene) {
+            const auto& nodes = scene->get_root()->get_children();
+            for (const auto& child_ptr : nodes) {
+                Node* node = child_ptr.get();
+
+                if (auto geo_node = dynamic_cast<GeometryInstance*>(node)) {
+                    auto& mesh = geo_node->mesh;
+
+                    BufferDesc vertex_desc{};
+                    vertex_desc.size = mesh.vertices.size() * sizeof(VertexData);
+                    vertex_desc.buffer_usage = BufferUsage::Storage;
+                    vertex_desc.memory_usage = MemoryUsage::CPUToGPU;
+                    vertex_desc.debug_name = "MeshVertexBuffer";
+                    vertex_desc.initial_data = mesh.vertices.data();
+
+                    metal_backend->vertex_buffer =
+                        metal_backend->rhi_device->create_buffer(vertex_desc);
+
+                    BufferDesc index_desc{};
+                    index_desc.size = mesh.indices.size() * sizeof(uint32_t);
+                    index_desc.buffer_usage = BufferUsage::Index;
+                    index_desc.memory_usage = MemoryUsage::CPUToGPU;
+                    index_desc.debug_name = "MeshIndexBuffer";
+                    index_desc.initial_data = mesh.indices.data();
+
+                    metal_backend->index_buffer =
+                        metal_backend->rhi_device->create_buffer(index_desc);
+
+                    std::vector<GPUMeshlet> gpu_meshlets;
+                    gpu_meshlets.reserve(mesh.meshlets.size());
+
+                    for (const meshopt_Meshlet& meshlet : mesh.meshlets) {
+                        gpu_meshlets.push_back({
+                            static_cast<uint32_t>(meshlet.vertex_offset),
+                            static_cast<uint32_t>(meshlet.triangle_offset),
+                            static_cast<uint32_t>(meshlet.vertex_count),
+                            static_cast<uint32_t>(meshlet.triangle_count)
+                        });
+                    }
+
+                    BufferDesc meshlet_desc{};
+                    meshlet_desc.size = gpu_meshlets.size() * sizeof(GPUMeshlet);
+                    meshlet_desc.buffer_usage = BufferUsage::Storage;
+                    meshlet_desc.memory_usage = MemoryUsage::CPUToGPU;
+                    meshlet_desc.debug_name = "MeshletBuffer";
+                    meshlet_desc.initial_data = gpu_meshlets.data();
+
+                    metal_backend->meshlet_buffer =
+                        metal_backend->rhi_device->create_buffer(meshlet_desc);
+
+                    BufferDesc meshlet_vertices_desc{};
+                    meshlet_vertices_desc.size =
+                        mesh.meshlet_vertices.size() * sizeof(uint32_t);
+                    meshlet_vertices_desc.buffer_usage = BufferUsage::Storage;
+                    meshlet_vertices_desc.memory_usage = MemoryUsage::CPUToGPU;
+                    meshlet_vertices_desc.debug_name = "MeshletVertexBuffer";
+                    meshlet_vertices_desc.initial_data = mesh.meshlet_vertices.data();
+
+                    metal_backend->meshlet_vertices =
+                        metal_backend->rhi_device->create_buffer(meshlet_vertices_desc);
+
+                    std::vector<uint32_t> packed_triangles(
+                        (mesh.meshlet_triangles.size() + 3) / 4,
+                        0
+                    );
+
+                    if (!mesh.meshlet_triangles.empty()) {
+                        std::memcpy(
+                            packed_triangles.data(),
+                            mesh.meshlet_triangles.data(),
+                            mesh.meshlet_triangles.size()
+                        );
+                    }
+
+                    BufferDesc meshlet_triangles_desc{};
+                    meshlet_triangles_desc.size = packed_triangles.size() * sizeof(uint32_t);
+                    meshlet_triangles_desc.buffer_usage = BufferUsage::Storage;
+                    meshlet_triangles_desc.memory_usage = MemoryUsage::CPUToGPU;
+                    meshlet_triangles_desc.debug_name = "MeshletTriangleBuffer";
+                    meshlet_triangles_desc.initial_data = packed_triangles.data();
+
+                    metal_backend->meshlet_indices =
+                        metal_backend->rhi_device->create_buffer(meshlet_triangles_desc);
+
+                    metal_backend->meshlet_count =
+                        static_cast<uint32_t>(mesh.meshlets.size());
+
+                }
+            }
+        }
 
         create_cube();
+
         create_default_library();
         create_command_queue();
 
@@ -205,12 +314,9 @@ namespace Primitive {
 
         auto& m = *metal_backend;
 
-        m.metal_command_buffer =
-            m.metal_command_queue->commandBuffer();
+        m.metal_command_buffer = m.metal_command_queue->commandBuffer();
 
-        auto* pass_desc = static_cast<MTL::RenderPassDescriptor*>(
-            m.framebuffer->get_native_render_pass_descriptor()
-        );
+        auto* pass_desc = static_cast<MTL::RenderPassDescriptor*>(m.framebuffer->get_native_render_pass_descriptor());
 
         auto* encoder =m.metal_command_buffer->renderCommandEncoder(pass_desc);
 
@@ -219,10 +325,11 @@ namespace Primitive {
         RenderContext context(command_list);
 
 
-        create_render_pipeline();
+        //create_render_pipeline();
 
         PipelineDesc pso_desc{};
         pso_desc.mesh_shader = mesh_fn;
+        //pso_desc.vertex_shader = vertex_fn;
         pso_desc.fragment_shader = scene_fragment_fn;
         pso_desc.color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
         pso_desc.depth_format = MTL::PixelFormatDepth32Float;
@@ -234,9 +341,12 @@ namespace Primitive {
 
         metal_backend->m_scene_render_pass = std::make_unique<SceneRenderPass>(
             metal_backend->vertex_buffer,
-            metal_backend->index_buffer,
             metal_backend->transform_buffer,
-            pso
+            metal_backend->meshlet_buffer,
+            metal_backend->meshlet_vertices,
+            metal_backend->meshlet_indices,
+            pso,
+            metal_backend->meshlet_count
         );
 
         PipelineDesc pso_desc2{};
@@ -264,8 +374,8 @@ namespace Primitive {
         metal_backend->sky_transform_buffer = metal_backend->rhi_device->create_buffer(transform_desc);
 
         metal_backend->m_sky_pass = std::make_unique<SkyPass>(
-            metal_backend->vertex_buffer,
-            metal_backend->index_buffer,
+            metal_backend->cube_vertex_buffer,
+            metal_backend->cube_index_buffer,
             metal_backend->sky_transform_buffer,
             metal_backend->sky_pipeline_state
         );
@@ -328,7 +438,7 @@ namespace Primitive {
         v_description.debug_name = "VertexBuffer";
         v_description.initial_data = cubeVertices;
 
-        metal_backend->vertex_buffer = metal_backend->rhi_device->create_buffer(v_description);
+        metal_backend->cube_vertex_buffer = metal_backend->rhi_device->create_buffer(v_description);
 
         BufferDesc i_description{};
         i_description.size = sizeof(cubeIndices);
@@ -337,7 +447,7 @@ namespace Primitive {
         i_description.debug_name = "IndexBuffer";
         i_description.initial_data = cubeIndices;
 
-        metal_backend->index_buffer = metal_backend->rhi_device->create_buffer(i_description);
+        metal_backend->cube_index_buffer = metal_backend->rhi_device->create_buffer(i_description);
 
     }
 
@@ -388,7 +498,7 @@ namespace Primitive {
           std::string vert_sky_msl = compiler.compile_glsl_file_to_msl("src/systems/rendering/shaders/sky_3d.vert.glsl");
           std::string frag_sky_msl = compiler.compile_glsl_file_to_msl("src/systems/rendering/shaders/sky_3d.frag.glsl");
 
-          std::cout << mesh_msl << "\n";
+          //std::cout << mesh_msl << "\n";
 
           metal_backend->metal_vertex_library = metal_backend->raw_metal_device->newLibrary(
             NS::String::string(vert_msl.c_str(), NS::UTF8StringEncoding),
@@ -499,13 +609,13 @@ namespace Primitive {
             }
         });
 
-        /* graph.add_pass({
+        graph.add_pass({
             .name = "Sky",
             .setup = [scene_color](RenderGraphBuilder& builder) {
                 builder.write(scene_color);
             },
             .execute = [&m](RenderContext& context) {m.m_sky_pass->execute(context); }
-        }); */
+        });
 
 
         graph.add_pass({
@@ -589,11 +699,13 @@ namespace Primitive {
 
     void MetalRenderer::update_scene_transforms() {
         glm::mat4x4 transform = glm::mat4x4(1.0f);
-        transform = glm::translate(transform, glm::vec3(0, 0, -1.0f));
+        transform = glm::translate(transform, glm::vec3(0, 0, 0.0f));
+        transform = glm::scale(transform, glm::vec3(0.01, 0.01, 0.01));
 
         float angle_in_degrees = 45.0f * glfwGetTime() / 2.0;
         float angle_in_radians = angle_in_degrees * M_PI / 180.0f;
-        transform = glm::rotate(transform, angle_in_radians, glm::vec3(1.0f, 1.0f, 1.0f));
+        transform = glm::rotate(transform, angle_in_radians, glm::vec3(0.0f, 1.0f, 0.0f));
+        //transform = glm::translate(transform, glm::vec3(0.0f, -0.5f, 0.0f));
         glm::mat4x4 model_matrix = transform;
 
         glm::vec3 R = {1, 0, 0}, U = {0, 1, 0}, F = {0, 0, -1}, P = {0, 0, 1};
@@ -610,11 +722,11 @@ namespace Primitive {
 
         float aspect_ratio = width / height;
 
-        float fov = 90.0f * (M_PI / 180.0f);
+        float fov = 80.0f * (M_PI / 180.0f);
         float near_z = 0.1f;
         float far_z = 100.0f;
 
-        glm::mat4x4 perspective_matrix = glm::perspectiveRH_ZO(fov, aspect_ratio, near_z, far_z); // matrix_perspective_right_hand( fov, aspect_ratio, near_z,far_z);
+        glm::mat4x4 perspective_matrix = glm::perspectiveRH_ZO(fov, aspect_ratio, near_z, far_z);
 
         TransformationData transformation_data = {
             model_matrix,

@@ -1,5 +1,6 @@
 #include "editor/layers/editor_layer.h"
 #include "core/events/ievent.h"
+#include "editor/import/resource_importer_scene.h"
 #include "editor/panels/inspector_panel.h"
 #include "editor/ui/IconsFontAwesome6.h"
 #include "editor/panels/hierarchy_panel.h"
@@ -42,9 +43,6 @@ namespace Primitive {
     }
 
     void EditorLayer::on_attach() {
-        GUID s_guid = m_project_manager->get_scene_manager()->create_scene();
-        m_project_manager->get_scene_manager()->set_open_scene_guid(s_guid);
-
         m_ui_context = std::make_unique<UIContext>(
             std::make_unique<GLFWUIBackend>(),
             std::make_unique<MetalUIBackend>(

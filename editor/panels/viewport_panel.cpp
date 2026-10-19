@@ -93,12 +93,12 @@ namespace Primitive {
             if (is_selected) {
                 ImGui::PushStyleColor(ImGuiCol_Button, Primitive::UIColors::content);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Primitive::UIColors::panel);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, Primitive::UIColors::selection);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, Primitive::UIColors::button_active);
                 ImGui::PushStyleColor(ImGuiCol_Text, Primitive::UIColors::accent);
             } else {
                 ImGui::PushStyleColor(ImGuiCol_Button, Primitive::UIColors::transparent);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Primitive::UIColors::content);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, Primitive::UIColors::selection);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Primitive::UIColors::button_hover);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, Primitive::UIColors::button_active);
                 ImGui::PushStyleColor(ImGuiCol_Text, Primitive::UIColors::text);
             }
 

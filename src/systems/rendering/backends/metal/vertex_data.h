@@ -18,3 +18,12 @@ struct TransformationData {
     alignas(64) glm::mat4x4 view_matrix;
     alignas(64) glm::mat4x4 perspective_matrix;
 };
+
+struct GPUMeshlet {
+    uint32_t vertex_offset;
+    uint32_t triangle_offset;
+    uint32_t vertex_count;
+    uint32_t triangle_count;
+};
+
+static_assert(sizeof(GPUMeshlet) == 16);

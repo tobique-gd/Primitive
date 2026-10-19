@@ -24,6 +24,8 @@ namespace Primitive {
         static inline const ImVec4 accent_hover      = ImVec4(0.95, (200.0 / 255.0) - 0.05, (87.0 / 255.0) - 0.05, 1.0);
         static inline const ImVec4 accent_active     = ImVec4(0.90, (200.0 / 255.0) - 0.1, (87.0 / 255.0) - 0.1, 1.0);
         static inline const ImVec4 selection         = ImVec4(1.00f, 1.00f, 1.00f, 0.15f);
+        static inline const ImVec4 button_hover        = ImVec4(1.00f, 1.00f, 1.00f, 0.075f);
+        static inline const ImVec4 button_active       = ImVec4(0.00f, 0.00f, 0.00f, 0.2f);
 
         static inline const ImVec4 transparent       = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     };

@@ -26,7 +26,7 @@ namespace Primitive {
         MetalRenderer();
         ~MetalRenderer() override;
 
-        void init(IWindow& window) override;
+        void init(IWindow& window, std::shared_ptr<ProjectManager> project_manager) override;
         void shutdown() override;
 
         void begin_frame() override;
