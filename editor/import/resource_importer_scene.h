@@ -15,10 +15,12 @@ namespace Primitive {
             EditorSceneFormatImporter(std::shared_ptr<ProjectManager> project_manager);
             ~EditorSceneFormatImporter() = default;
             GUID import_scene(std::filesystem::path& path);
+
         private:
             Mesh build_meshlets(const std::vector<VertexData>& vertices, const std::vector<uint32_t>& indices);
             void extract_vertices(const aiMesh* mesh, std::vector<VertexData>& vertices);
             void extract_indices(const aiMesh* mesh, std::vector<uint32_t>& indices);
+            void ensure_winding_order(const std::vector<VertexData>& vertices, std::vector<uint32_t>& indices);
 
             std::shared_ptr<ProjectManager> m_project_manager;
     };

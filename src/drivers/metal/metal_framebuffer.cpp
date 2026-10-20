@@ -66,9 +66,13 @@ namespace Primitive {
        render_pass_descriptor_ = MTL::RenderPassDescriptor::alloc()->init();
 
        auto* color_attach = render_pass_descriptor_->colorAttachments()->object(0);
+
        color_attach->setTexture(msaa_color_texture_);
-       color_attach->setResolveTexture(static_cast<MTL::Texture*>(resolved_color_texture_->get_native_handle()));
-       color_attach->setLoadAction(desc_.color_attachment.clear_on_load ? MTL::LoadActionClear : MTL::LoadActionLoad);
+       color_attach->setLoadAction(
+           desc_.color_attachment.clear_on_load
+               ? MTL::LoadActionClear
+               : MTL::LoadActionLoad
+       );
        color_attach->setClearColor(MTL::ClearColor(
            desc_.color_attachment.clear_color.r,
            desc_.color_attachment.clear_color.g,
@@ -76,7 +80,15 @@ namespace Primitive {
            desc_.color_attachment.clear_color.a
        ));
 
-       color_attach->setStoreAction(desc_.sample_count > 1 ? MTL::StoreActionMultisampleResolve : MTL::StoreActionStore);
+       if (desc_.sample_count > 1) {
+           color_attach->setResolveTexture(
+               static_cast<MTL::Texture*>(resolved_color_texture_->get_native_handle())
+           );
+           color_attach->setStoreAction(MTL::StoreActionMultisampleResolve);
+       } else {
+           color_attach->setResolveTexture(nullptr);
+           color_attach->setStoreAction(MTL::StoreActionStore);
+       }
 
        auto* depth_attach = render_pass_descriptor_->depthAttachment();
        depth_attach->setTexture(depth_texture_);

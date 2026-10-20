@@ -14,7 +14,12 @@ namespace Primitive {
             virtual void draw_indexed(uint32_t index_count, uint32_t first_index) = 0;
             virtual void draw(uint32_t vertex_count, uint32_t first_vertex) = 0;
             virtual void draw_mesh_threadgroups(MTL::Size threadgroups_per_grid, MTL::Size threads_per_threadgroup, MTL::Size object_threads_per_threadgroup) = 0;
-
+            virtual void set_viewport(
+                uint32_t x,
+                uint32_t y,
+                uint32_t width,
+                uint32_t height
+            ) = 0;
 
     };
 }

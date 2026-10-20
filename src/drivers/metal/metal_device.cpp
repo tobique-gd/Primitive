@@ -146,8 +146,8 @@ namespace Primitive {
 
             MTL::Winding winding = (desc.rasterizer.winding_order == WindingOrder::Clockwise) ? MTL::WindingClockwise : MTL::WindingCounterClockwise;
 
-            //MTL::CullMode cull = (desc.rasterizer.cull_mode == CullMode::Back) ? MTL::CullModeBack : (desc.rasterizer.cull_mode == CullMode::Front ? MTL::CullModeFront : MTL::CullModeNone);
-            MTL::CullMode cull = MTL::CullModeNone;
+            MTL::CullMode cull = (desc.rasterizer.cull_mode == CullMode::Back) ? MTL::CullModeBack : (desc.rasterizer.cull_mode == CullMode::Front ? MTL::CullModeFront : MTL::CullModeNone);
+            //MTL::CullMode cull = MTL::CullModeNone;
 
             return std::make_shared<MetalPipelineState>(pso, dss, winding, cull, desc.debug_name);
 

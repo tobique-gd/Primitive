@@ -101,6 +101,7 @@ namespace Primitive
         uint32_t color_format = 0;
         uint32_t depth_format = 0;
         int sample_count = 4;
+        CullMode cull_mode = CullMode::Back;
 
         std::string debug_name;
     };

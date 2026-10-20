@@ -1,4 +1,3 @@
-// src/drivers/metal/metal_swapchain.cpp
 #include "drivers/metal/metal_swapchain.h"
 #include "platform/macos/cocoa_bridge.h"
 

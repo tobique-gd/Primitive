@@ -70,6 +70,23 @@ namespace Primitive {
             void draw(uint32_t vertex_count, uint32_t first_vertex) override {
 
             }
+            void set_viewport(
+                uint32_t x,
+                uint32_t y,
+                uint32_t width,
+                uint32_t height
+            ) override {
+                if (!encoder_ || width == 0 || height == 0) return;
+
+                encoder_->setViewport(MTL::Viewport{
+                    static_cast<double>(x),
+                    static_cast<double>(y),
+                    static_cast<double>(width),
+                    static_cast<double>(height),
+                    0.0,
+                    1.0
+                });
+            }
 
 
         private:

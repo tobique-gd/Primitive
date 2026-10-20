@@ -150,17 +150,23 @@ namespace Primitive {
         return metal_backend->ui_pass_descriptor;
     }
 
-    void MetalRenderer::set_viewport_size(int width, int height) {
-        if (width <= 0 || height <= 0) return;
+    void MetalRenderer::set_viewport_size(int width, int height)
+    {
+        if (width <= 0 || height <= 0)
+            return;
 
-        if (metal_backend->viewport_size.x == width &&
-            metal_backend->viewport_size.y == height) return;
+        auto& m = *metal_backend;
 
-        metal_backend->viewport_size = { width, height };
+        if (m.viewport_size.x == width && m.viewport_size.y == height) return;
 
-        if (metal_backend->framebuffer) {
-            metal_backend->framebuffer->resize(width, height);
-        }
+        m.viewport_size = {width, height};
+
+        if (m.framebuffer) m.framebuffer->resize(width, height);
+
+        if (m.m_scene_render_pass) m.m_scene_render_pass->resize(width, height);
+
+        if (m.m_sky_pass) m.m_sky_pass->resize(width, height);
+
     }
 
     void MetalRenderer::on_window_resize(int width, int height)
@@ -324,17 +330,15 @@ namespace Primitive {
 
         RenderContext context(command_list);
 
-
-        //create_render_pipeline();
-
         PipelineDesc pso_desc{};
         pso_desc.mesh_shader = mesh_fn;
-        //pso_desc.vertex_shader = vertex_fn;
+        pso_desc.vertex_shader = vertex_fn;
         pso_desc.fragment_shader = scene_fragment_fn;
         pso_desc.color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
         pso_desc.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc.sample_count = metal_backend->sample_count;
         pso_desc.depth_stencil.depth_write_enable = true;
+        pso_desc.cull_mode = CullMode::Back;
         pso_desc.pipeline_type = PipelineType::Mesh;
 
         auto pso = metal_backend->rhi_device->create_pipeline_state(pso_desc);
@@ -356,6 +360,7 @@ namespace Primitive {
         pso_desc2.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc2.sample_count = metal_backend->sample_count;
         pso_desc2.depth_stencil.depth_write_enable = false;
+        pso_desc2.cull_mode = CullMode::None;
         pso_desc2.pipeline_type = PipelineType::Standard;
 
         metal_backend->sky_pipeline_state = metal_backend->rhi_device->create_pipeline_state(pso_desc2);
@@ -666,8 +671,9 @@ namespace Primitive {
 
     void MetalRenderer::update_sky_transforms()
     {
-        glm::mat4 model_matrix(1.0f);
+        glm::mat4 model_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(50.0f));
         glm::mat4 view_matrix(1.0f);
+
 
         float width = static_cast<float>(metal_backend->viewport_size.x);
         float height = static_cast<float>(metal_backend->viewport_size.y);

@@ -18,7 +18,7 @@ namespace Primitive {
     GUID EditorSceneFormatImporter::import_scene(std::filesystem::path& path) {
         Assimp::Importer importer;
 
-        const aiScene* imported_scene = importer.ReadFile(path, aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType | aiProcess_GenNormals);
+        const aiScene* imported_scene = importer.ReadFile(path, aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType | aiProcess_GenNormals | aiProcess_FlipWindingOrder);
 
         if (nullptr == imported_scene) {
             return GUID::INVALID;
@@ -122,6 +122,8 @@ namespace Primitive {
         meshlet_vertices.resize(last.vertex_offset + last.vertex_count);
         meshlet_triangles.resize(last.triangle_offset + last.triangle_count * 3);
         meshlets.resize(meshlet_count);
+
+        meshopt_optimizeMeshlet(&meshlet_vertices[last.vertex_offset], &meshlet_triangles[last.triangle_offset], last.triangle_count, last.vertex_count);
 
         Mesh m = Mesh();
         m.meshlets = meshlets;

@@ -8,6 +8,7 @@
 #include "imgui_internal.h"
 #include "systems/rendering/rhi/texture_2d.h"
 #include <cmath>
+#include <iostream>
 #include <memory>
 
 namespace Primitive {
@@ -28,24 +29,36 @@ namespace Primitive {
         ImGui::Begin("Viewport", nullptr, windowFlags);
         ImGui::PopStyleVar();
 
-        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_T)) {
-            m_toolbar_visible = !m_toolbar_visible;
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+            if (ImGui::IsKeyPressed(ImGuiKey_T)) m_toolbar_visible = !m_toolbar_visible;
+            if (ImGui::IsKeyPressed(ImGuiKey_Q)) m_editor_state->temporary.selected_tool = 0;
+            if (ImGui::IsKeyPressed(ImGuiKey_W)) m_editor_state->temporary.selected_tool = 1;
+            if (ImGui::IsKeyPressed(ImGuiKey_E)) m_editor_state->temporary.selected_tool = 2;
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) m_editor_state->temporary.selected_tool = 3;
         }
+
+
         ImVec2 viewport_pos = ImGui::GetCursorScreenPos();
         ImVec2 avail = ImGui::GetContentRegionAvail();
+        ImVec2 scale = ImGui::GetIO().DisplayFramebufferScale;
 
+        int width = static_cast<int>(std::round(avail.x * scale.x));
+        int height = static_cast<int>(std::round(avail.y * scale.y));
 
-        if (avail.x != m_last_viewport_width ||avail.y != m_last_viewport_height) {
+        if (width > 0 && height > 0 &&
+            (width != m_last_viewport_width ||
+             height != m_last_viewport_height)) {
             if (m_event_dispatcher) {
                 m_event_dispatcher->dispatch_event(
-                    std::make_shared<ViewportSizeChangedEvent>(avail.x, avail.y)
+                    std::make_shared<ViewportSizeChangedEvent>(width, height)
                 );
-                m_last_viewport_width = avail.x;
-                m_last_viewport_height = avail.y;
+
+                m_last_viewport_width = width;
+                m_last_viewport_height = height;
             }
         }
 
-        if (m_texture) {
+        if (m_texture && avail.x > 0.0f && avail.y > 0.0f) {
             ImGui::Image(m_texture->get_native_handle(), avail);
         }
 

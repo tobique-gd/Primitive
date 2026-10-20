@@ -29,6 +29,8 @@ namespace Primitive {
     {
         auto& command_list = context.get_command_list();
 
+        command_list.set_viewport(0, 0, m_width, m_height);
+
         command_list.set_pipeline_state(m_pipeline);
 
         command_list.set_mesh_buffer(m_meshlet_buffer, 0);
