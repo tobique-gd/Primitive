@@ -3,7 +3,7 @@
 #include "render_pass.h"
 
 #include "systems/rendering/rhi/buffer.h"
-#include "systems/rendering/rhi/pipeline_state.h"
+#include "systems/rendering/rhi/render_pipeline_state.h"
 
 #include <cstdint>
 #include <memory>
@@ -18,7 +18,8 @@ namespace Primitive {
             std::shared_ptr<IBuffer> meshlet_buffer,
             std::shared_ptr<IBuffer> meshlet_vertex_buffer,
             std::shared_ptr<IBuffer> meshlet_triangle_buffer,
-            std::shared_ptr<IPipelineState> pipeline,
+            std::shared_ptr<IBuffer> meshlet_bounds_buffer,
+            std::shared_ptr<IRenderPipelineState> pipeline,
             uint32_t meshlet_count
         );
 
@@ -31,7 +32,8 @@ namespace Primitive {
         std::shared_ptr<IBuffer> m_meshlet_buffer;
         std::shared_ptr<IBuffer> m_meshlet_vertex_buffer;
         std::shared_ptr<IBuffer> m_meshlet_triangle_buffer;
-        std::shared_ptr<IPipelineState> m_pipeline;
+        std::shared_ptr<IBuffer> m_meshlet_bounds_buffer;
+        std::shared_ptr<IRenderPipelineState> m_pipeline;
         uint32_t m_meshlet_count;
 
         uint32_t m_width = 1;

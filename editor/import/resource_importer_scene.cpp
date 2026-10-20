@@ -1,8 +1,11 @@
 #include "editor/import/resource_importer_scene.h"
 #include "assimp/mesh.h"
 
+#include "glm/ext/vector_float3.hpp"
 #include "scene/3d/geometry_instance.h"
+#include "scene/resources/3d/aabb.h"
 #include "scene/resources/3d/mesh.h"
+#include "systems/rendering/backends/metal/vertex_data.h"
 #include <cstdint>
 #include <filesystem>
 #include <assimp/Importer.hpp>
@@ -14,6 +17,37 @@
 
 namespace Primitive {
     EditorSceneFormatImporter::EditorSceneFormatImporter(std::shared_ptr<ProjectManager> project_manager) : m_project_manager(project_manager) {};
+
+    AABB compute_aabb_from_mesh(Mesh& mesh) {
+        glm::vec3 start;
+        glm::vec3 end;
+        for (auto v : mesh.vertices) {
+            glm::vec3 position = glm::vec3(v.position.x, v.position.y, v.position.z);
+            if (position.x < start.x) {
+                start.x = position.x;
+            } else if (position.y < start.y) {
+                start.y = position.y;
+            } else if (position.z < start.z) {
+                start.z = position.z;
+            }
+
+            if (position.x > end.x) {
+                end.x = position.x;
+            } else if (position.y < end.y) {
+                end.y = position.y;
+            } else if (position.z < end.z) {
+                end.z = position.z;
+            }
+
+        }
+
+        AABB aabb = AABB();
+        aabb.start = start;
+        aabb.end = end;
+        aabb.size = end - start;
+
+        return aabb;
+    }
 
     GUID EditorSceneFormatImporter::import_scene(std::filesystem::path& path) {
         Assimp::Importer importer;
@@ -40,6 +74,7 @@ namespace Primitive {
 
             auto geo_instance = std::make_unique<GeometryInstance>();
             geo_instance->mesh = m;
+            geo_instance->aabb = compute_aabb_from_mesh(m);
 
             scene->get_root()->add_child(std::move(geo_instance));
 
@@ -90,6 +125,7 @@ namespace Primitive {
     }
 
 
+
     Mesh EditorSceneFormatImporter::build_meshlets(const std::vector<VertexData>& vertices, const std::vector<uint32_t>& indices) {
         const size_t max_vertices = 64;
         const size_t max_triangles = 64;
@@ -124,6 +160,35 @@ namespace Primitive {
         meshlets.resize(meshlet_count);
 
         meshopt_optimizeMeshlet(&meshlet_vertices[last.vertex_offset], &meshlet_triangles[last.triangle_offset], last.triangle_count, last.vertex_count);
+        std::vector<meshopt_Bounds> bounds(meshlet_count);
+
+        for (size_t i = 0; i < meshlet_count; ++i) {
+            meshopt_Meshlet& m = meshlets[i];
+
+            meshopt_optimizeMeshlet(
+                &meshlet_vertices[m.vertex_offset],
+                &meshlet_triangles[m.triangle_offset],
+                m.triangle_count,
+                m.vertex_count
+            );
+
+            bounds[i] = meshopt_computeMeshletBounds(
+                &meshlet_vertices[m.vertex_offset],
+                &meshlet_triangles[m.triangle_offset],
+                m.triangle_count,
+                &vertices[0].position[0],
+                vertices.size(),
+                sizeof(VertexData)
+            );
+
+            // we need this since meshoptComputeMeshletBounds expects CCW triangle rotation but Primitivr uses Clockwise winding so we reverse the AXI
+            bounds[i].cone_axis[0] = -bounds[i].cone_axis[0];
+            bounds[i].cone_axis[1] = -bounds[i].cone_axis[1];
+            bounds[i].cone_axis[2] = -bounds[i].cone_axis[2];
+            bounds[i].cone_axis_s8[0] = -bounds[i].cone_axis_s8[0];
+            bounds[i].cone_axis_s8[1] = -bounds[i].cone_axis_s8[1];
+            bounds[i].cone_axis_s8[2] = -bounds[i].cone_axis_s8[2];
+        }
 
         Mesh m = Mesh();
         m.meshlets = meshlets;
@@ -131,6 +196,7 @@ namespace Primitive {
         m.meshlet_triangles = meshlet_triangles;
         m.vertices = vertices;
         m.indices = indices;
+        m.meshlet_bounds = std::move(bounds);
 
         return m;
     }

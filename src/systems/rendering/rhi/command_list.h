@@ -1,13 +1,13 @@
 #pragma once
 
 #include "systems/rendering/rhi/buffer.h"
-#include "systems/rendering/rhi/pipeline_state.h"
+#include "systems/rendering/rhi/render_pipeline_state.h"
 #include <memory>
 namespace Primitive {
     class ICommandList {
         public:
             virtual ~ICommandList() = default;
-            virtual void set_pipeline_state(std::shared_ptr<IPipelineState> state) = 0;
+            virtual void set_pipeline_state(std::shared_ptr<IRenderPipelineState> state) = 0;
             virtual void set_vertex_buffer(std::shared_ptr<IBuffer> buffer, uint32_t index) = 0;
             virtual void set_mesh_buffer(std::shared_ptr<IBuffer> buffer, uint32_t index) = 0;
             virtual void set_index_buffer(std::shared_ptr<IBuffer> buffer) = 0;

@@ -1,12 +1,11 @@
 
 #include "editor/panels/inspector_panel.h"
-#include "editor/ui/IconsFontAwesome6.h"
 #include "imgui.h"
 
 namespace Primitive {
     void InspectorPanel::on_imgui_render() {
 
-        ImGui::Begin("Inspector");
+        ImGui::Begin("Node Inspector");
 
         if (m_editor_state->temporary.selected_node == nullptr) {
             ImGui::End();

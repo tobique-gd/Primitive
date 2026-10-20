@@ -7,5 +7,5 @@ layout(location = 1) in vec3 v_normal;
 
 void main()
 {
-    fragmentColor = vec4(vec3(106.0/255.0, 170.0/255.0, 215.0/255.0), 1.0);
+    fragmentColor = vec4(vec3(8.0/255.0, 10.0/255.0, 11.5/255.0), 1.0);
 }

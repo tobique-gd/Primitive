@@ -82,7 +82,7 @@ namespace Primitive
         bool wireframe = false;
     };
 
-    struct PipelineDesc {
+    struct RenderPipelineDesc {
         void* vertex_shader = nullptr;
         void* fragment_shader = nullptr;
         void* mesh_shader = nullptr;
@@ -100,15 +100,13 @@ namespace Primitive
 
         uint32_t color_format = 0;
         uint32_t depth_format = 0;
-        int sample_count = 4;
-        CullMode cull_mode = CullMode::Back;
-
+        int sample_count = 1;
         std::string debug_name;
     };
 
-    class IPipelineState {
+    class IRenderPipelineState {
         public:
-            virtual ~IPipelineState() = default;
+            virtual ~IRenderPipelineState() = default;
 
             virtual const std::string& get_debug_name() const = 0;
     };

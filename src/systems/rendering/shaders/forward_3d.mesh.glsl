@@ -20,9 +20,19 @@ struct Meshlet {
     uint triangle_count;
 };
 
-layout(std430, binding = 0) readonly buffer VertexBuffer {
-    VertexData vertex_data[];
+struct MeshletBound {
+    float center[3];
+    float radius;
+
+    float cone_apex[3];
+    float cone_axis[3];
+    float cone_cutoff;
+
+    int8_t cone_axis_s8[3];
+    int8_t cone_cutoff_s8;
 };
+
+layout(std430, binding = 0) readonly buffer VertexBuffer { VertexData vertex_data[]; };
 
 layout(std140, binding = 1) uniform TransformationData {
     mat4 modelMatrix;
@@ -30,17 +40,11 @@ layout(std140, binding = 1) uniform TransformationData {
     mat4 perspectiveMatrix;
 };
 
-layout(std430, binding = 2) readonly buffer MeshletBuffer {
-    Meshlet meshlets[];
-};
+layout(std430, binding = 2) readonly buffer MeshletBuffer { Meshlet meshlets[]; };
+layout(std430, binding = 3) readonly buffer MeshletVertexBuffer { uint meshlet_vertices[]; };
+layout(std430, binding = 4) readonly buffer MeshletTriangleBuffer { uint8_t meshlet_triangles[]; };
+layout(std430, binding = 5) readonly buffer MeshletBoundsBuffer { MeshletBound meshlet_bounds[]; };
 
-layout(std430, binding = 3) readonly buffer MeshletVertexBuffer {
-    uint meshlet_vertices[];
-};
-
-layout(std430, binding = 4) readonly buffer MeshletTriangleBuffer {
-    uint8_t meshlet_triangles[];
-};
 
 layout(location = 0) perprimitiveEXT out vec3 meshlet_color[];
 layout(location = 1) out vec3 v_normal[];
@@ -50,13 +54,26 @@ float random (vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 }
 
+
 void main() {
     Meshlet meshlet = meshlets[gl_WorkGroupID.x];
+    MeshletBound bound = meshlet_bounds[gl_WorkGroupID.x];
+
+    mat4 modelView = viewMatrix * modelMatrix;
+    mat4 mvp = perspectiveMatrix * modelView;
+    mat3 normal_matrix = transpose(inverse(mat3(modelMatrix)));
+
+    vec3 camera_position_obj = inverse(modelView)[3].xyz;
+
+    vec3 cone_apex = vec3(bound.cone_apex[0], bound.cone_apex[1], bound.cone_apex[2]);
+    vec3 cone_axis = vec3(bound.cone_axis[0], bound.cone_axis[1], bound.cone_axis[2]);
+
+    if (dot(normalize(cone_apex - camera_position_obj), cone_axis) >= bound.cone_cutoff) {
+        SetMeshOutputsEXT(0, 0);
+        return;
+    }
 
     SetMeshOutputsEXT(meshlet.vertex_count, meshlet.triangle_count);
-
-    mat4 mvp = perspectiveMatrix * viewMatrix * modelMatrix;
-    mat3 normal_matrix = transpose(inverse(mat3(modelMatrix)));
 
     for (uint i = gl_LocalInvocationIndex; i < meshlet.vertex_count; i += gl_WorkGroupSize.x) {
         uint vertex_index = meshlet_vertices[meshlet.vertex_offset + i];
@@ -81,8 +98,6 @@ void main() {
             uint(meshlet_triangles[offset + 2u])
         );
     }
-
-
 
 
 }

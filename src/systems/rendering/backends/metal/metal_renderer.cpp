@@ -39,7 +39,7 @@
 
 #include "systems/rendering/rhi/buffer.h"
 #include "systems/rendering/rhi/device.h"
-#include "systems/rendering/rhi/pipeline_state.h"
+#include "systems/rendering/rhi/render_pipeline_state.h"
 #include "systems/rendering/rhi/render_context.h"
 #include "systems/rendering/rhi/swapchain.h"
 #include "systems/rendering/rhi/texture_2d.h"
@@ -64,17 +64,19 @@ namespace Primitive {
 
         std::shared_ptr<IBuffer> vertex_buffer;
         std::shared_ptr<IBuffer> index_buffer;
-        std::shared_ptr<IBuffer>  meshlet_buffer;
-        std::shared_ptr<IBuffer>  meshlet_vertices;
-        std::shared_ptr<IBuffer>  meshlet_indices;
+        std::shared_ptr<IBuffer> meshlet_buffer;
+        std::shared_ptr<IBuffer> meshlet_vertices;
+        std::shared_ptr<IBuffer> meshlet_indices;
+        std::shared_ptr<IBuffer> meshlet_bounds;
         uint32_t meshlet_count;
+
 
         std::shared_ptr<IBuffer> cube_vertex_buffer;
         std::shared_ptr<IBuffer> cube_index_buffer;
 
         std::shared_ptr<IBuffer> transform_buffer;
         std::shared_ptr<IBuffer> sky_transform_buffer;
-        std::shared_ptr<IPipelineState> pipeline_state;
+        std::shared_ptr<IRenderPipelineState> pipeline_state;
         std::shared_ptr<Texture2D> viewport_texture;
 
         std::shared_ptr<IFramebuffer> framebuffer;
@@ -85,7 +87,7 @@ namespace Primitive {
 
         MTL::Library* sky_vertex_library = nullptr;
         MTL::Library* sky_fragment_library = nullptr;
-        std::shared_ptr<IPipelineState> sky_pipeline_state;
+        std::shared_ptr<IRenderPipelineState> sky_pipeline_state;
 
         glm::ivec2 viewport_size = {1, 1};
         int sample_count = 4;
@@ -197,7 +199,7 @@ namespace Primitive {
         create_buffers();
 
         EditorSceneFormatImporter imp = EditorSceneFormatImporter(project_manager);
-        std::filesystem::path p = std::filesystem::path("editor/import/xyzrgb_dragon.obj");
+        std::filesystem::path p = std::filesystem::path("assets/models/stanford_dragon.glb");
         GUID s = imp.import_scene(p);
 
         project_manager->get_scene_manager()->set_open_scene_guid(s);
@@ -254,8 +256,7 @@ namespace Primitive {
                         metal_backend->rhi_device->create_buffer(meshlet_desc);
 
                     BufferDesc meshlet_vertices_desc{};
-                    meshlet_vertices_desc.size =
-                        mesh.meshlet_vertices.size() * sizeof(uint32_t);
+                    meshlet_vertices_desc.size = mesh.meshlet_vertices.size() * sizeof(uint32_t);
                     meshlet_vertices_desc.buffer_usage = BufferUsage::Storage;
                     meshlet_vertices_desc.memory_usage = MemoryUsage::CPUToGPU;
                     meshlet_vertices_desc.debug_name = "MeshletVertexBuffer";
@@ -289,6 +290,15 @@ namespace Primitive {
 
                     metal_backend->meshlet_count =
                         static_cast<uint32_t>(mesh.meshlets.size());
+
+                    BufferDesc meshlet_bounds_desc{};
+                    meshlet_bounds_desc.size = mesh.meshlet_bounds.size() * sizeof(meshopt_Bounds);
+                    meshlet_bounds_desc.buffer_usage = BufferUsage::Storage;
+                    meshlet_bounds_desc.memory_usage = MemoryUsage::CPUToGPU;
+                    meshlet_bounds_desc.debug_name = "MeshletBoundsBuffer";
+                    meshlet_bounds_desc.initial_data = mesh.meshlet_bounds.data();
+
+                    metal_backend->meshlet_bounds = metal_backend->rhi_device->create_buffer(meshlet_bounds_desc);
 
                 }
             }
@@ -330,7 +340,7 @@ namespace Primitive {
 
         RenderContext context(command_list);
 
-        PipelineDesc pso_desc{};
+        RenderPipelineDesc pso_desc{};
         pso_desc.mesh_shader = mesh_fn;
         pso_desc.vertex_shader = vertex_fn;
         pso_desc.fragment_shader = scene_fragment_fn;
@@ -338,7 +348,7 @@ namespace Primitive {
         pso_desc.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc.sample_count = metal_backend->sample_count;
         pso_desc.depth_stencil.depth_write_enable = true;
-        pso_desc.cull_mode = CullMode::Back;
+        pso_desc.rasterizer.cull_mode = CullMode::Back;
         pso_desc.pipeline_type = PipelineType::Mesh;
 
         auto pso = metal_backend->rhi_device->create_pipeline_state(pso_desc);
@@ -349,18 +359,19 @@ namespace Primitive {
             metal_backend->meshlet_buffer,
             metal_backend->meshlet_vertices,
             metal_backend->meshlet_indices,
+            metal_backend->meshlet_bounds,
             pso,
             metal_backend->meshlet_count
         );
 
-        PipelineDesc pso_desc2{};
+        RenderPipelineDesc pso_desc2{};
         pso_desc2.vertex_shader = vertex_fn;
         pso_desc2.fragment_shader = fragment_fn;
         pso_desc2.color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
         pso_desc2.depth_format = MTL::PixelFormatDepth32Float;
         pso_desc2.sample_count = metal_backend->sample_count;
         pso_desc2.depth_stencil.depth_write_enable = false;
-        pso_desc2.cull_mode = CullMode::None;
+        pso_desc2.rasterizer.cull_mode = CullMode::Front;
         pso_desc2.pipeline_type = PipelineType::Standard;
 
         metal_backend->sky_pipeline_state = metal_backend->rhi_device->create_pipeline_state(pso_desc2);
@@ -471,24 +482,6 @@ namespace Primitive {
         metal_backend->metal_command_queue = metal_backend->raw_metal_device->newCommandQueue();
     }
 
-    void MetalRenderer::create_render_pipeline() {
-        MTL::Function* vertex_fn = metal_backend->metal_vertex_library->newFunction(NS::String::string("main0", NS::ASCIIStringEncoding));
-        MTL::Function* fragment_fn = metal_backend->metal_fragment_library->newFunction(NS::String::string("main0", NS::ASCIIStringEncoding));
-
-        PipelineDesc pso_desc{};
-        pso_desc.vertex_shader = vertex_fn;
-        pso_desc.fragment_shader = fragment_fn;
-        pso_desc.color_format = static_cast<MTL::PixelFormat>(metal_backend->swapchain->get_color_format());
-        pso_desc.depth_format = MTL::PixelFormatDepth32Float;
-        pso_desc.sample_count = metal_backend->sample_count;
-        pso_desc.depth_stencil.depth_write_enable = true;
-        pso_desc.pipeline_type = PipelineType::Standard;
-
-        metal_backend->pipeline_state = metal_backend->rhi_device->create_pipeline_state(pso_desc);
-
-        vertex_fn->release();
-        fragment_fn->release();
-    }
 
     void MetalRenderer::create_default_library() {
       NS::Error* error = nullptr;
@@ -705,7 +698,7 @@ namespace Primitive {
 
     void MetalRenderer::update_scene_transforms() {
         glm::mat4x4 transform = glm::mat4x4(1.0f);
-        transform = glm::translate(transform, glm::vec3(0, 0, 0.0f));
+        transform = glm::translate(transform, glm::vec3(0, -0.5, -0.5f));
         transform = glm::scale(transform, glm::vec3(0.01, 0.01, 0.01));
 
         float angle_in_degrees = 45.0f * glfwGetTime() / 2.0;

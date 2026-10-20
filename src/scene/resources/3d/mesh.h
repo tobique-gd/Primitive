@@ -13,7 +13,7 @@ class Mesh : public Resource {
         std::vector<meshopt_Meshlet> meshlets;
         std::vector<uint32_t> meshlet_vertices;
         std::vector<unsigned char> meshlet_triangles;
-
+        std::vector<meshopt_Bounds> meshlet_bounds;
 
 
 

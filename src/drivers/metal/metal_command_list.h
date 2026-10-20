@@ -3,7 +3,7 @@
 #include "Metal/MTLArgument.hpp"
 #include "Metal/MTLRenderCommandEncoder.hpp"
 #include "drivers/metal/metal_buffer.h"
-#include "drivers/metal/metal_pipeline_state.h"
+#include "drivers/metal/metal_render_pipeline_state.h"
 #include "systems/rendering/rhi/buffer.h"
 #include "systems/rendering/rhi/command_list.h"
 #include <cstdint>
@@ -15,7 +15,7 @@ namespace Primitive {
         public:
             explicit MetalCommandList(MTL::RenderCommandEncoder* encoder) : encoder_(encoder) {}
 
-            void set_pipeline_state(std::shared_ptr<IPipelineState> state) override {
+            void set_pipeline_state(std::shared_ptr<IRenderPipelineState> state) override {
                 if (!encoder_) {
                     std::cerr << "MetalCommandList: encoder is null\n";
                     return;
@@ -26,7 +26,7 @@ namespace Primitive {
                     return;
                 }
 
-                auto metal_pso = std::static_pointer_cast<MetalPipelineState>(state);
+                auto metal_pso = std::static_pointer_cast<MetalRenderPipelineState>(state);
 
                 if (!metal_pso->get_pso()) {
                     std::cerr << "MetalCommandList: native pipeline is null\n";

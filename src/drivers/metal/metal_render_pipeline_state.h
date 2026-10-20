@@ -3,15 +3,15 @@
 #include "Metal/MTLDepthStencil.hpp"
 #include "Metal/MTLRenderCommandEncoder.hpp"
 #include "Metal/MTLRenderPipeline.hpp"
-#include "systems/rendering/rhi/pipeline_state.h"
+#include "systems/rendering/rhi/render_pipeline_state.h"
 #include <string>
 namespace Primitive {
-    class MetalPipelineState : public IPipelineState {
+    class MetalRenderPipelineState : public IRenderPipelineState {
         public:
-            MetalPipelineState(MTL::RenderPipelineState* pso, MTL::DepthStencilState* depth_stecil, MTL::Winding winding, MTL::CullMode cull_mode, std::string debug_name)
+            MetalRenderPipelineState(MTL::RenderPipelineState* pso, MTL::DepthStencilState* depth_stecil, MTL::Winding winding, MTL::CullMode cull_mode, std::string debug_name)
             : render_pso_(pso), depth_stencil_state_(depth_stecil), winding_(winding), cull_mode_(cull_mode), debug_name_(debug_name) {}
 
-            ~MetalPipelineState() override {
+            ~MetalRenderPipelineState() override {
                 if (render_pso_) render_pso_->release();
                 if (depth_stencil_state_) depth_stencil_state_->release();
             }

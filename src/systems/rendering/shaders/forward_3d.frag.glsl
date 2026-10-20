@@ -11,6 +11,7 @@ void main()
 
     float diff =  lambert_term;
 
+    //vec3 diffuse = diff * vec3(0.773, 0.773, 0.773);
     vec3 diffuse = meshlet_color;
 
     fragmentColor = vec4(diffuse, 1.0);

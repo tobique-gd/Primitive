@@ -152,7 +152,7 @@ namespace Primitive {
             };
 
             ImGui::SetCursorPosY(item_y);
-            ImGui::Button("L", ImVec2(28.0f, item_height));
+            ImGui::Button("L", ImVec2(20.0f, 20.0f));
 
             if (begin_top_menu("Scene")) {
                 ImGui::PushStyleColor(ImGuiCol_Text, UIColors::text);

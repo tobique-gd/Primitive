@@ -11,7 +11,7 @@
 namespace Primitive {
 
     void HierarchyPanel::on_imgui_render() {
-        ImGui::Begin("Hierarchy");
+        ImGui::Begin("World Inspector");
 
         std::shared_ptr<Scene> scene = m_project_manager->get_scene_manager()->get_open_scene();
 
